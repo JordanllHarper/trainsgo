@@ -38,7 +38,7 @@ func onTrainGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	}
 	parsedId, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		return nil, customClientError("Invalid Id")
+		return nil, ClientError{"Invalid Id"}
 	}
 
 	var trainEntity TrainEntity
@@ -51,15 +51,15 @@ func onTrainGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	return TrainGetRequestSingular{trainEntity}, nil
 }
 
-const needBody string = "Need body"
-const malformedBody string = "Malformed body"
+var needBody = ClientError{"Need body"}
+var malformedBody = ClientError{"Malformed body"}
 
 // Creates a new train and inserts into the database. Returns the train in the body of the response.
 func onTrainPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	body := req.Body
 
 	if body == nil {
-		return nil, customClientError(needBody)
+		return nil, needBody
 	}
 
 	decoder := json.NewDecoder(body)
@@ -68,7 +68,7 @@ func onTrainPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	err := decoder.Decode(&train)
 
 	if err != nil {
-		return nil, customClientError(malformedBody)
+		return nil, malformedBody
 	}
 
 	tEntity := TrainEntity{DbFields: DbFields{}, Train: train}
@@ -78,19 +78,20 @@ func onTrainPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	return TrainGetRequestSingular{tEntity}, nil
 }
 
-const provideId string = "No ID provided"
+var provideId ClientError = ClientError{"No ID provided"}
+var invalidId ClientError = ClientError{"Invalid ID"}
 
 func onTrainDelete(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	queries := req.URL.Query()
 	id := queries.Get("id")
 
 	if id == "" {
-		return nil, customClientError(provideId)
+		return nil, provideId
 	}
 
 	parsedId, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		return nil, customClientError("Invalid Id")
+		return nil, invalidId
 	}
 
 	trainEntity := &TrainEntity{
