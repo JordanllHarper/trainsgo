@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -66,7 +65,6 @@ func main() {
 
 	if err != nil {
 		log.Fatalf("Database error %s", err)
-		os.Exit(1)
 		return // for explicitness
 	}
 
@@ -79,7 +77,7 @@ func main() {
 				db,
 			)
 			if err != nil {
-				checkError(err)
+				log.Println("[ERROR] handle trains failed:", err)
 			}
 		})
 	}
