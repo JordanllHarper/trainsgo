@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -13,14 +14,30 @@ import (
 // Used in the train dashboard.
 func handleRoot(w http.ResponseWriter, r *http.Request) {}
 
-type TrainGetRequestEmpty struct{}
-
-type TrainGetRequestSingular struct {
-	TrainEntity
+type TrainResponseEmpty struct {
+	int
 }
 
-type TrainGetRequestMultiple struct {
-	Trains []TrainEntity
+func (trainGetRequest TrainResponseEmpty) StatusCode() int {
+	return trainGetRequest.int
+}
+
+type TrainResponseSingular struct {
+	TrainEntity
+	statusCode int
+}
+
+func (response TrainResponseSingular) StatusCode() int {
+	return response.statusCode
+}
+
+type TrainResponseMultiple struct {
+	Trains     []TrainEntity
+	statusCode int
+}
+
+func (trainGetRequest TrainResponseMultiple) StatusCode() int {
+	return trainGetRequest.statusCode
 }
 
 type TrainGetRequest interface{}
@@ -31,67 +48,96 @@ type TrainGetRequest interface{}
 func onTrainGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	queries := req.URL.Query()
 	id := queries.Get("id")
-	if id == "" {
+	if strings.TrimSpace(id) == "" {
 		var trainEntities []TrainEntity
 		db.Find(&trainEntities)
-		return TrainGetRequestMultiple{trainEntities}, nil
+		return TrainResponseMultiple{Trains: trainEntities, statusCode: http.StatusOK}, nil
 	}
 	parsedId, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		return nil, ClientError{"Invalid Id"}
+		return nil, provideId()
 	}
 
 	var trainEntity TrainEntity
 	result := db.Where(&TrainEntity{DbFields: DbFields{ID: uint(parsedId)}}).Find(&trainEntity)
 
 	if result.RowsAffected == 0 {
-		return TrainGetRequestEmpty{}, nil
+		return TrainResponseEmpty{http.StatusNoContent}, nil
 	}
 
-	return TrainGetRequestSingular{trainEntity}, nil
+	return TrainResponseSingular{trainEntity, http.StatusOK}, nil
 }
 
-var needBody = ClientError{"Need body"}
-var malformedBody = ClientError{"Malformed body"}
+func needBody() ClientError { return ClientError{"Need body"} }
+
+func malformedBody() ClientError { return ClientError{"Malformed body"} }
 
 // Creates a new train and inserts into the database. Returns the train in the body of the response.
 func onTrainPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	body := req.Body
-
 	if body == nil {
-		return nil, needBody
+		return nil, needBody()
 	}
 
-	decoder := json.NewDecoder(body)
-
 	var train Train
+	decoder := json.NewDecoder(body)
 	err := decoder.Decode(&train)
-
 	if err != nil {
-		return nil, malformedBody
+		return nil, malformedBody()
 	}
 
 	tEntity := TrainEntity{DbFields: DbFields{}, Train: train}
-	db.Create(&tEntity)
+	db = db.Create(&tEntity)
 	fmt.Printf("[INFO]: Inserted train entity: %v\n", tEntity)
 
-	return TrainGetRequestSingular{tEntity}, nil
+	return TrainResponseSingular{tEntity, http.StatusCreated}, nil
 }
 
-var provideId ClientError = ClientError{"No ID provided"}
-var invalidId ClientError = ClientError{"Invalid ID"}
+func provideId() ClientError { return ClientError{"No ID provided"} }
+func invalidId() ClientError { return ClientError{"Invalid ID"} }
 
-func onTrainDelete(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
+func onTrainPut(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
+
+	body := req.Body
 	queries := req.URL.Query()
 	id := queries.Get("id")
-
-	if id == "" {
-		return nil, provideId
+	if strings.TrimSpace(id) == "" {
+		return nil, provideId()
 	}
 
 	parsedId, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		return nil, invalidId
+		return nil, invalidId()
+	}
+
+	var updatedTrainFields Train
+	decoder := json.NewDecoder(body)
+	err = decoder.Decode(&updatedTrainFields)
+	if err != nil {
+		return nil, malformedBody()
+	}
+
+	trainEntity := TrainEntity{DbFields: DbFields{ID: uint(parsedId)}, Train: updatedTrainFields}
+	result := db.Updates(&trainEntity)
+	if result.RowsAffected != 0 {
+		fmt.Printf("[INFO]: Modified train entity id: %v\n", parsedId)
+		return TrainResponseSingular{trainEntity, http.StatusOK}, nil
+	} else {
+		fmt.Printf("[INFO]: Attempted modification with no result: %v\n", parsedId)
+		return TrainResponseEmpty{http.StatusNoContent}, nil
+	}
+}
+
+func onTrainDelete(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
+	queries := req.URL.Query()
+	id := queries.Get("id")
+	if strings.TrimSpace(id) == "" {
+		return nil, provideId()
+	}
+
+	parsedId, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		return nil, invalidId()
 	}
 
 	trainEntity := &TrainEntity{
@@ -104,5 +150,5 @@ func onTrainDelete(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 		fmt.Printf("[INFO]: Attempted deletion with no result: %v\n", parsedId)
 	}
 
-	return nil, nil
+	return TrainResponseEmpty{http.StatusNoContent}, nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/http"
 	"time"
 )
 
@@ -11,7 +12,9 @@ type DbFields struct {
 	DeletedAt *time.Time
 }
 
-type ResponseBody interface{}
+type ResponseBody interface {
+	StatusCode() int
+}
 
 type HttpError interface {
 	Status() (int, string)
@@ -21,15 +24,6 @@ type ClientError struct {
 	message string
 }
 
-type ServerError struct {
-	message string
-}
-
-
-func (serverError ServerError) Status() (int, string) {
-	return 500, serverError.message
-}
-
 func (clientError ClientError) Status() (int, string) {
-	return 400, clientError.message
+	return http.StatusBadRequest, clientError.message
 }

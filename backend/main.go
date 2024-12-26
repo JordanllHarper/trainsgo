@@ -15,39 +15,50 @@ func handleHttpError(w http.ResponseWriter, err HttpError) {
 	http.Error(w, msg, code)
 }
 
+func handleResponse(
+	db *gorm.DB,
+	r *http.Request,
+	w http.ResponseWriter,
+	handler func(db *gorm.DB, r *http.Request) (ResponseBody, HttpError),
+	requestType string,
+) error {
+	response, httpError := handler(db, r)
+
+	if httpError != nil {
+		handleHttpError(w, httpError)
+		return nil
+	}
+
+	json, err := json.Marshal(response)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return err
+	}
+	w.WriteHeader(response.StatusCode())
+	w.Write(json)
+	fmt.Printf("Responded to %v request with %v\n", requestType, response)
+
+	return nil
+}
+
 // Crud operations on trains
 func handleTrains(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
 	method := r.Method
-	encoder := json.NewEncoder(w)
 
 	switch method {
 	case "GET":
-		response, httpError := onTrainGet(db, r)
-		if httpError != nil {
-			handleHttpError(w, httpError)
-			return nil
-		}
-		if err := encoder.Encode(response); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return err
-		} else {
-			fmt.Println("Responded to GET request with", response)
-		}
+		return handleResponse(db, r, w, onTrainGet, "GET")
 
 	case "POST":
-		response, err := onTrainPost(db, r)
-		if err != nil {
-			code, msg := err.Status()
-			http.Error(w, msg, code)
-			return nil
-		}
+		return handleResponse(db, r, w, onTrainPost, "POST")
 
-		if err := encoder.Encode(response); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return err
-		} else {
-			fmt.Println("Responded to POST request with", response)
-		}
+	case "PUT":
+		return handleResponse(db, r, w, onTrainPut, "PUT")
+
+	case "DELETE":
+		return handleResponse(db, r, w, onTrainDelete, "DELETE")
+
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
