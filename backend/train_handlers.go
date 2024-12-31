@@ -3,23 +3,23 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"strings"
-
-	"gorm.io/gorm"
 )
 
-// Root requests provide information about the state of the applicationa
-// Used in the train dashboard.
-func handleRoot(w http.ResponseWriter, r *http.Request) {}
+func needBody() ClientError      { return ClientError{"Need body"} }
+func provideId() ClientError     { return ClientError{"No ID provided"} }
+func invalidId() ClientError     { return ClientError{"Invalid ID"} }
+func malformedBody() ClientError { return ClientError{"Malformed body"} }
 
 type TrainResponseEmpty struct {
 	int
 }
 
-func (trainGetRequest TrainResponseEmpty) StatusCode() int {
-	return trainGetRequest.int
+func (response TrainResponseEmpty) StatusCode() int {
+	return response.int
 }
 
 type TrainResponseSingular struct {
@@ -36,8 +36,8 @@ type TrainResponseMultiple struct {
 	statusCode int
 }
 
-func (trainGetRequest TrainResponseMultiple) StatusCode() int {
-	return trainGetRequest.statusCode
+func (response TrainResponseMultiple) StatusCode() int {
+	return response.statusCode
 }
 
 type TrainGetRequest interface{}
@@ -68,10 +68,6 @@ func onTrainGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	return TrainResponseSingular{trainEntity, http.StatusOK}, nil
 }
 
-func needBody() ClientError { return ClientError{"Need body"} }
-
-func malformedBody() ClientError { return ClientError{"Malformed body"} }
-
 // Creates a new train and inserts into the database. Returns the train in the body of the response.
 func onTrainPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	body := req.Body
@@ -92,9 +88,6 @@ func onTrainPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 
 	return TrainResponseSingular{tEntity, http.StatusCreated}, nil
 }
-
-func provideId() ClientError { return ClientError{"No ID provided"} }
-func invalidId() ClientError { return ClientError{"Invalid ID"} }
 
 func onTrainPut(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 
