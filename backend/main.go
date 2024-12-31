@@ -23,20 +23,20 @@ func handleResponse(
 	requestType string,
 ) error {
 	response, httpError := handler(db, r)
-
 	if httpError != nil {
 		handleHttpError(w, httpError)
 		return nil
 	}
 
 	json, err := json.Marshal(response)
-
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "Operation was successful but response couldn't be serialized", http.StatusInternalServerError)
 		return err
 	}
+
 	w.WriteHeader(response.StatusCode())
 	w.Write(json)
+
 	fmt.Printf("Responded to %v request with %v\n", requestType, response)
 
 	return nil
@@ -60,7 +60,7 @@ func handleTrains(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
 		return handleResponse(db, r, w, onTrainDelete, "DELETE")
 
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		http.Error(w, "Supported methods are: GET POST PUT DELETE", http.StatusMethodNotAllowed)
 	}
 
 	return nil
