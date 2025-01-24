@@ -2,15 +2,7 @@ package main
 
 import (
 	"net/http"
-	"time"
 )
-
-type DbFields struct {
-	ID        uint
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt *time.Time
-}
 
 type ResponseBody interface {
 	StatusCode() int

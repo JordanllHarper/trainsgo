@@ -66,7 +66,7 @@ func handleTrains(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
 	return nil
 }
 
-func handleStation(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
+func handleStations(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
 
 	method := r.Method
 
@@ -113,6 +113,17 @@ func main() {
 			)
 			if err != nil {
 				log.Println("[ERROR] handle trains failed:", err)
+			}
+		})
+
+		http.HandleFunc("/stations", func(w http.ResponseWriter, r *http.Request) {
+			err := handleStations(
+				w,
+				r,
+				db,
+			)
+			if err != nil {
+				log.Println("[ERROR] handle station failed:", err)
 			}
 		})
 	}

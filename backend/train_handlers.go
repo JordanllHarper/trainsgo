@@ -6,36 +6,27 @@ import (
 	"gorm.io/gorm"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 type TrainResponseEmpty struct {
 	int
 }
 
-func (response TrainResponseEmpty) StatusCode() int {
-	return response.int
-}
+func (response TrainResponseEmpty) StatusCode() int { return response.int }
 
 type TrainResponseSingular struct {
 	TrainEntity
 	statusCode int
 }
 
-func (response TrainResponseSingular) StatusCode() int {
-	return response.statusCode
-}
+func (response TrainResponseSingular) StatusCode() int { return response.statusCode }
 
 type TrainResponseMultiple struct {
 	Trains     []TrainEntity
 	statusCode int
 }
 
-func (response TrainResponseMultiple) StatusCode() int {
-	return response.statusCode
-}
-
-type TrainGetRequest interface{}
+func (response TrainResponseMultiple) StatusCode() int { return response.statusCode }
 
 // Gets a train.
 //
@@ -43,7 +34,7 @@ type TrainGetRequest interface{}
 func onTrainGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	queries := req.URL.Query()
 	id := queries.Get("id")
-	if strings.TrimSpace(id) == "" {
+	if stringEmpty(id) {
 		var trainEntities []TrainEntity
 		db.Find(&trainEntities)
 		return TrainResponseMultiple{Trains: trainEntities, statusCode: http.StatusOK}, nil
@@ -85,11 +76,10 @@ func onTrainPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 }
 
 func onTrainPut(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
-
 	body := req.Body
 	queries := req.URL.Query()
 	id := queries.Get("id")
-	if strings.TrimSpace(id) == "" {
+	if stringEmpty(id) {
 		return nil, provideId()
 	}
 
@@ -119,7 +109,7 @@ func onTrainPut(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 func onTrainDelete(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	queries := req.URL.Query()
 	id := queries.Get("id")
-	if strings.TrimSpace(id) == "" {
+	if stringEmpty(id) {
 		return nil, provideId()
 	}
 

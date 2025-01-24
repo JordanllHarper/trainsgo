@@ -1,30 +1,130 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
-	"net/url"
-	"strings"
+	"strconv"
 
 	"gorm.io/gorm"
 )
 
+type StationResponseEmpty struct {
+	int
+}
+
+func (response StationResponseEmpty) StatusCode() int { return response.int }
+
+type StationResponseSingular struct {
+	StationEntity
+	statusCode int
+}
+
+func (response StationResponseSingular) StatusCode() int { return response.statusCode }
+
+type StationResponseMultiple struct {
+	Stations   []StationEntity
+	statusCode int
+}
+
+func (response StationResponseMultiple) StatusCode() int { return response.statusCode }
+
 func onStationGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	queries := req.URL.Query()
-	id := queries.Get()
+	id := queries.Get("id")
 
-	if strings.TrimSpace(id) == "" {
-		// id is not null
+	if stringEmpty(id) {
+		var stationEntities []StationEntity
+		db.Find(&stationEntities)
+		return StationResponseMultiple{Stations: stationEntities, statusCode: http.StatusOK}, nil
+	}
+
+	parsedId, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		return nil, provideId()
+	}
+
+	var stationEntity StationEntity
+	result := db.Where(&StationEntity{DbFields: DbFields{ID: uint(parsedId)}}).Find(&stationEntity)
+	if result.RowsAffected == 0 {
+		return StationResponseEmpty{http.StatusNoContent}, nil
+	}
+
+	return StationResponseSingular{stationEntity, http.StatusOK}, nil
+}
+
+func onStationPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
+	body := req.Body
+	if body == nil {
+		return nil, needBody()
+	}
+
+	var station Station
+	decoder := json.NewDecoder(body)
+	err := decoder.Decode(&station)
+	if err != nil {
+		return nil, malformedBody()
+	}
+
+	sEntity := StationEntity{DbFields: DbFields{}, Station: station}
+	db = db.Create(&sEntity)
+	fmt.Printf("[INFO]: Inserted train entity: %v\n", sEntity)
+
+	return StationResponseSingular{sEntity, http.StatusCreated}, nil
+}
+
+func onStationPut(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
+	body := req.Body
+	queries := req.URL.Query()
+	id := queries.Get("id")
+	if stringEmpty(id) {
+		return nil, provideId()
+	}
+
+	parsedId, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		return nil, invalidId()
+	}
+
+	var updatedStationFields Station
+	decoder := json.NewDecoder(body)
+	err = decoder.Decode(&updatedStationFields)
+	if err != nil {
+		return nil, malformedBody()
+	}
+
+	stationEntity := StationEntity{DbFields: DbFields{ID: uint(parsedId)}, Station: updatedStationFields}
+	result := db.Updates(&stationEntity)
+	if result.RowsAffected != 0 {
+		fmt.Printf("[INFO]: Modified station entity id: %v\n", parsedId)
+		return StationResponseSingular{stationEntity, http.StatusOK}, nil
+	} else {
+		fmt.Printf("[INFO]: Attempted modification with no result: %v\n", parsedId)
+		return StationResponseEmpty{http.StatusNoContent}, nil
 	}
 }
 
-func onStationPost(db *gorm.DB, r *http.Request) (ResponseBody, HttpError) {
+func onStationDelete(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
+	queries := req.URL.Query()
+	id := queries.Get("id")
+	if stringEmpty(id) {
+		return nil, provideId()
+	}
 
-}
+	parsedId, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		return nil, invalidId()
+	}
 
-func onStationPut(db *gorm.DB, r *http.Request) (ResponseBody, HttpError) {
+	trainEntity := &StationEntity{
+		DbFields: DbFields{ID: uint(parsedId)},
+	}
+	result := db.Delete(&trainEntity)
+	if result.RowsAffected != 0 {
+		fmt.Printf("[INFO]: Deleted train entity id: %v\n", parsedId)
+	} else {
+		fmt.Printf("[INFO]: Attempted deletion with no result: %v\n", parsedId)
+	}
 
-}
-
-func onStationDelete(db *gorm.DB, r *http.Request) (ResponseBody, HttpError) {
-
+	return StationResponseEmpty{http.StatusNoContent}, nil
 }
