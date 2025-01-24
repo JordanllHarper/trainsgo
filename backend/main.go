@@ -66,6 +66,30 @@ func handleTrains(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
 	return nil
 }
 
+func handleStation(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
+
+	method := r.Method
+
+	switch method {
+	case "GET":
+		return handleResponse(db, r, w, onStationGet, "GET")
+
+	case "POST":
+		return handleResponse(db, r, w, onStationPost, "POST")
+
+	case "PUT":
+		return handleResponse(db, r, w, onStationPut, "PUT")
+
+	case "DELETE":
+		return handleResponse(db, r, w, onStationDelete, "DELETE")
+
+	default:
+		http.Error(w, "Supported methods are: GET POST PUT DELETE", http.StatusMethodNotAllowed)
+	}
+
+	return nil
+}
+
 func main() {
 	// db
 	dsn := "root:@tcp(127.0.0.1:3306)/trainsgo?charset=utf8mb4&parseTime=True"
@@ -80,7 +104,7 @@ func main() {
 	}
 
 	{
-		http.HandleFunc("/", handleRoot)
+		// http.HandleFunc("/", )
 		http.HandleFunc("/trains", func(w http.ResponseWriter, r *http.Request) {
 			err := handleTrains(
 				w,

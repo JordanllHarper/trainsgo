@@ -9,11 +9,6 @@ import (
 	"strings"
 )
 
-func needBody() ClientError      { return ClientError{"Need body"} }
-func provideId() ClientError     { return ClientError{"No ID provided"} }
-func invalidId() ClientError     { return ClientError{"Invalid ID"} }
-func malformedBody() ClientError { return ClientError{"Malformed body"} }
-
 type TrainResponseEmpty struct {
 	int
 }
