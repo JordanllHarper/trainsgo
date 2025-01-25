@@ -1,4 +1,4 @@
-package main
+package api
 
 type Status string
 
@@ -14,9 +14,9 @@ type TrainEntity struct {
 	Train
 }
 type Train struct {
-	Name     string `json:"name"`
+	Name string `json:"name"`
 	// meters / second
-	TopSpeed int    `json:"top_speed"`
+	TopSpeed int `json:"top_speed"`
 	Coordinates
 	Status `json:"status"`
 }

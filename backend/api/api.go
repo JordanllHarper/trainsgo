@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"encoding/json"
@@ -20,7 +20,6 @@ func handleResponse(
 	r *http.Request,
 	w http.ResponseWriter,
 	handler func(db *gorm.DB, r *http.Request) (ResponseBody, HttpError),
-	requestType string,
 ) error {
 	response, httpError := handler(db, r)
 	if httpError != nil {
@@ -37,27 +36,26 @@ func handleResponse(
 	w.WriteHeader(response.StatusCode())
 	w.Write(json)
 
-	fmt.Printf("Responded to %v request with %v\n", requestType, response)
+	fmt.Printf("Responded to %v request with %v\n", r.Method, response)
 
 	return nil
 }
 
-// Crud operations on trains
 func handleTrains(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
 	method := r.Method
 
 	switch method {
 	case "GET":
-		return handleResponse(db, r, w, onTrainGet, "GET")
+		return handleResponse(db, r, w, onTrainGet)
 
 	case "POST":
-		return handleResponse(db, r, w, onTrainPost, "POST")
+		return handleResponse(db, r, w, onTrainPost)
 
 	case "PUT":
-		return handleResponse(db, r, w, onTrainPut, "PUT")
+		return handleResponse(db, r, w, onTrainPut)
 
 	case "DELETE":
-		return handleResponse(db, r, w, onTrainDelete, "DELETE")
+		return handleResponse(db, r, w, onTrainDelete)
 
 	default:
 		http.Error(w, "Supported methods are: GET POST PUT DELETE", http.StatusMethodNotAllowed)
@@ -72,16 +70,16 @@ func handleStations(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
 
 	switch method {
 	case "GET":
-		return handleResponse(db, r, w, onStationGet, "GET")
+		return handleResponse(db, r, w, onStationGet)
 
 	case "POST":
-		return handleResponse(db, r, w, onStationPost, "POST")
+		return handleResponse(db, r, w, onStationPost)
 
 	case "PUT":
-		return handleResponse(db, r, w, onStationPut, "PUT")
+		return handleResponse(db, r, w, onStationPut)
 
 	case "DELETE":
-		return handleResponse(db, r, w, onStationDelete, "DELETE")
+		return handleResponse(db, r, w, onStationDelete)
 
 	default:
 		http.Error(w, "Supported methods are: GET POST PUT DELETE", http.StatusMethodNotAllowed)
@@ -90,7 +88,7 @@ func handleStations(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
 	return nil
 }
 
-func main() {
+func Run() {
 	// db
 	dsn := "root:@tcp(127.0.0.1:3306)/trainsgo?charset=utf8mb4&parseTime=True"
 	db, err := gorm.Open(

@@ -1,4 +1,4 @@
-package main
+package api
 
 // Coordinates for locating on an x and y axis
 type Coordinates struct {

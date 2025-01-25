@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"net/http"
@@ -19,6 +19,12 @@ type ClientError struct {
 func (clientError ClientError) Status() (int, string) {
 	return http.StatusBadRequest, clientError.message
 }
+
+type EmptyResponseBody struct{ int }
+
+func (response EmptyResponseBody) StatusCode() int { return response.int }
+
+func NewEmptyResponseBody() ResponseBody { return EmptyResponseBody{http.StatusNoContent} }
 
 func needBody() ClientError      { return ClientError{"Need body"} }
 func provideId() ClientError     { return ClientError{"No ID provided"} }

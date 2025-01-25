@@ -1,4 +1,4 @@
-module jordanharper.com/transgo/backend
+module github.com/JordanllHarper/trainsgo/api
 
 go 1.23.3
 

@@ -1,4 +1,4 @@
-package main
+package api
 
 type StationEntity struct {
 	DbFields
