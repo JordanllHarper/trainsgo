@@ -9,15 +9,13 @@ import (
 	"gorm.io/gorm"
 )
 
-type StationResponseEmpty struct {
-	int
-}
-
-func (response StationResponseEmpty) StatusCode() int { return response.int }
-
 type StationResponseSingular struct {
 	StationEntity
 	statusCode int
+}
+
+func NewStationResponseSingular(statusCode int, station StationEntity) StationResponseSingular {
+	return StationResponseSingular{station, statusCode}
 }
 
 func (response StationResponseSingular) StatusCode() int { return response.statusCode }
@@ -25,6 +23,10 @@ func (response StationResponseSingular) StatusCode() int { return response.statu
 type StationResponseMultiple struct {
 	Stations   []StationEntity
 	statusCode int
+}
+
+func NewStationResponseMultiple(statusCode int, station []StationEntity) StationResponseMultiple {
+	return StationResponseMultiple{station, statusCode}
 }
 
 func (response StationResponseMultiple) StatusCode() int { return response.statusCode }
@@ -36,7 +38,7 @@ func onStationGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	if stringEmpty(id) {
 		var stationEntities []StationEntity
 		db.Find(&stationEntities)
-		return StationResponseMultiple{Stations: stationEntities, statusCode: http.StatusOK}, nil
+		return NewStationResponseMultiple(http.StatusOK, stationEntities), nil
 	}
 
 	parsedId, err := strconv.ParseUint(id, 10, 64)
@@ -47,10 +49,10 @@ func onStationGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	var stationEntity StationEntity
 	result := db.Where(&StationEntity{DbFields: DbFields{ID: uint(parsedId)}}).Find(&stationEntity)
 	if result.RowsAffected == 0 {
-		return StationResponseEmpty{http.StatusNoContent}, nil
+		return NewEmptyResponseBody(), nil
 	}
 
-	return StationResponseSingular{stationEntity, http.StatusOK}, nil
+	return NewStationResponseSingular(http.StatusOK, stationEntity), nil
 }
 
 func onStationPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
@@ -70,7 +72,7 @@ func onStationPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	db = db.Create(&sEntity)
 	fmt.Printf("[INFO]: Inserted train entity: %v\n", sEntity)
 
-	return StationResponseSingular{sEntity, http.StatusCreated}, nil
+	return NewStationResponseSingular(http.StatusCreated, sEntity), nil
 }
 
 func onStationPut(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
@@ -97,10 +99,10 @@ func onStationPut(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	result := db.Updates(&stationEntity)
 	if result.RowsAffected != 0 {
 		fmt.Printf("[INFO]: Modified station entity id: %v\n", parsedId)
-		return StationResponseSingular{stationEntity, http.StatusOK}, nil
+		return NewStationResponseSingular(http.StatusOK, stationEntity), nil
 	} else {
 		fmt.Printf("[INFO]: Attempted modification with no result: %v\n", parsedId)
-		return StationResponseEmpty{http.StatusNoContent}, nil
+		return NewEmptyResponseBody(), nil
 	}
 }
 
@@ -126,5 +128,5 @@ func onStationDelete(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 		fmt.Printf("[INFO]: Attempted deletion with no result: %v\n", parsedId)
 	}
 
-	return StationResponseEmpty{http.StatusNoContent}, nil
+	return NewEmptyResponseBody(), nil
 }

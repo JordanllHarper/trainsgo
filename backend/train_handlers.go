@@ -8,15 +8,13 @@ import (
 	"strconv"
 )
 
-type TrainResponseEmpty struct {
-	int
-}
-
-func (response TrainResponseEmpty) StatusCode() int { return response.int }
-
 type TrainResponseSingular struct {
 	TrainEntity
 	statusCode int
+}
+
+func NewTrainResponseSingular(statusCode int, train TrainEntity) TrainResponseSingular {
+	return TrainResponseSingular{TrainEntity: train, statusCode: http.StatusOK}
 }
 
 func (response TrainResponseSingular) StatusCode() int { return response.statusCode }
@@ -24,6 +22,10 @@ func (response TrainResponseSingular) StatusCode() int { return response.statusC
 type TrainResponseMultiple struct {
 	Trains     []TrainEntity
 	statusCode int
+}
+
+func NewTrainResponseMultiple(statusCode int, trains []TrainEntity) TrainResponseMultiple {
+	return TrainResponseMultiple{Trains: trains, statusCode: http.StatusOK}
 }
 
 func (response TrainResponseMultiple) StatusCode() int { return response.statusCode }
@@ -37,7 +39,7 @@ func onTrainGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	if stringEmpty(id) {
 		var trainEntities []TrainEntity
 		db.Find(&trainEntities)
-		return TrainResponseMultiple{Trains: trainEntities, statusCode: http.StatusOK}, nil
+		return NewTrainResponseMultiple(http.StatusOK, trainEntities), nil
 	}
 	parsedId, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
@@ -48,10 +50,10 @@ func onTrainGet(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	result := db.Where(&TrainEntity{DbFields: DbFields{ID: uint(parsedId)}}).Find(&trainEntity)
 
 	if result.RowsAffected == 0 {
-		return TrainResponseEmpty{http.StatusNoContent}, nil
+		return NewEmptyResponseBody(), nil
 	}
 
-	return TrainResponseSingular{trainEntity, http.StatusOK}, nil
+	return NewTrainResponseSingular(http.StatusOK, trainEntity), nil
 }
 
 // Creates a new train and inserts into the database. Returns the train in the body of the response.
@@ -102,7 +104,7 @@ func onTrainPut(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 		return TrainResponseSingular{trainEntity, http.StatusOK}, nil
 	} else {
 		fmt.Printf("[INFO]: Attempted modification with no result: %v\n", parsedId)
-		return TrainResponseEmpty{http.StatusNoContent}, nil
+		return NewEmptyResponseBody(), nil
 	}
 }
 
@@ -128,5 +130,5 @@ func onTrainDelete(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 		fmt.Printf("[INFO]: Attempted deletion with no result: %v\n", parsedId)
 	}
 
-	return TrainResponseEmpty{http.StatusNoContent}, nil
+	return NewEmptyResponseBody(), nil
 }

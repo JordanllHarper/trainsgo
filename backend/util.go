@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -22,3 +23,9 @@ func checkError(err error) {
 func stringEmpty(s string) bool {
 	return strings.TrimSpace(s) == ""
 }
+
+type EmptyResponseBody struct{ int }
+
+func (response EmptyResponseBody) StatusCode() int { return response.int }
+
+func NewEmptyResponseBody() EmptyResponseBody { return EmptyResponseBody{http.StatusNoContent} }
