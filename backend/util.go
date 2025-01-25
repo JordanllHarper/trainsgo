@@ -28,4 +28,4 @@ type EmptyResponseBody struct{ int }
 
 func (response EmptyResponseBody) StatusCode() int { return response.int }
 
-func NewEmptyResponseBody() EmptyResponseBody { return EmptyResponseBody{http.StatusNoContent} }
+func NewEmptyResponseBody() ResponseBody { return EmptyResponseBody{http.StatusNoContent} }
