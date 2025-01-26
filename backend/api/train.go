@@ -1,5 +1,9 @@
 package api
 
+import (
+	"github.com/JordanllHarper/trainsgo/app"
+)
+
 type Status string
 
 const (
