@@ -1,9 +1,4 @@
-package api
-
-type StationEntity struct {
-	DbFields
-	Station
-}
+package common
 
 type Station struct {
 	Name string `json:"name"`

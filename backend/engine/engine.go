@@ -1,35 +1,27 @@
 package engine
 
-import ()
-
 /*
 TODO:
-
-	Setup a channel that allows creation of stations on said grid
-	Setup a channel that allows for creation of trains between stations.
-	Simulate train moving across grid - hard bit
+Setup registering new stations.
+Setup registering new trains
+Simulate all our trains moving - incrementing and decrementing coordinates
 */
 
-/*
-NOTE:
-Grid is not necessary, we just need to keep track of entities. We don't need to actually plot them on a grid.
-
-*/
-
-const CellGridSize = 1000
-
-type CellType int
-type Information string
+type EventType int
 
 const (
-	Empty CellType = iota
-	Station
+	// Will refresh the simulation and move back to a starting state or restart
+	RestartSimulation EventType = iota
+	PauseSimulation
+	UnpauseSimulation
 )
 
-type Cell struct {
-	CellType
-	Information
+type Event struct {
+	EventType
 }
 
-func NewEmptyCell() Cell   { return Cell{CellType: Empty, Information: "Empty Cell"} }
-func NewStationCell() Cell { return Cell{CellType: Station, Information: "Station Cell"} }
+func Run(events chan Event) chan EngineState {
+	engineChan := make(chan EngineState)
+
+	return engineChan
+}

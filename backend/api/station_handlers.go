@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/JordanllHarper/trainsgo/backend/common"
 	"net/http"
 	"strconv"
 
@@ -39,7 +40,7 @@ func onStationPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 		return nil, needBody()
 	}
 
-	var station Station
+	var station common.Station
 	decoder := json.NewDecoder(body)
 	err := decoder.Decode(&station)
 	if err != nil {
@@ -66,7 +67,7 @@ func onStationPut(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 		return nil, invalidId()
 	}
 
-	var updatedStationFields Station
+	var updatedStationFields common.Station
 	decoder := json.NewDecoder(body)
 	err = decoder.Decode(&updatedStationFields)
 	if err != nil {

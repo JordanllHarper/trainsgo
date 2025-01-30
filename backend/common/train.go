@@ -1,8 +1,4 @@
-package api
-
-import (
-	"github.com/JordanllHarper/trainsgo/app"
-)
+package common
 
 type Status string
 
@@ -13,10 +9,6 @@ const (
 	Emergency           = "Emergency"
 )
 
-type TrainEntity struct {
-	DbFields
-	Train
-}
 type Train struct {
 	Name string `json:"name"`
 	// meters / second
