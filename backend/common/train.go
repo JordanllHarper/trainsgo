@@ -14,5 +14,6 @@ type Train struct {
 	// meters / second
 	TopSpeed int `json:"top_speed"`
 	Coordinates
+
 	Status `json:"status"`
 }

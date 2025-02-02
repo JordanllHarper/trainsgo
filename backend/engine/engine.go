@@ -1,5 +1,7 @@
 package engine
 
+import "fmt"
+
 /*
 TODO:
 Setup registering new stations.
@@ -7,21 +9,46 @@ Setup registering new trains
 Simulate all our trains moving - incrementing and decrementing coordinates
 */
 
-type EventType int
+type PlaybackEvents int
 
 const (
 	// Will refresh the simulation and move back to a starting state or restart
-	RestartSimulation EventType = iota
+	RestartSimulation PlaybackEvents = iota
 	PauseSimulation
 	UnpauseSimulation
+	QuitSimulation
 )
 
 type Event struct {
-	EventType
+	currentEngineState EngineState
+	pbEvents           PlaybackEvents
 }
 
-func Run(events chan Event) chan EngineState {
-	engineChan := make(chan EngineState)
+func NewEvent(currentEngineState EngineState, pbEvents PlaybackEvents) Event {
+	return Event{
+		currentEngineState, pbEvents,
+	}
+}
 
-	return engineChan
+func Run(in_events chan Event, state_out chan EngineState) error {
+	for {
+		x := <-in_events
+		// fmt.Printf("Received event %v", x)
+
+		switch s := x.currentEngineState; x.pbEvents {
+		case PauseSimulation:
+			s.processPause(state_out)
+		case QuitSimulation:
+			fmt.Println("Quitting...")
+			return nil
+		case RestartSimulation:
+			s.processRestart(state_out)
+		case UnpauseSimulation:
+			s.processUnpause(state_out)
+		default:
+			panic(fmt.Sprintf("Unexpected event: %#v", x.pbEvents))
+		}
+
+	}
+
 }

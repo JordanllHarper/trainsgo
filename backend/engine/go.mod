@@ -1,4 +1,4 @@
-module github.com/JordanllHarper/trainsgo/engine
+module github.com/JordanllHarper/trainsgo/backend/engine
 
 go 1.23.4
 

@@ -66,7 +66,7 @@ func onStationPut(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	}
 
 	var updatedStationFields common.Station
-	if err := json.NewDecoder(body).Decode(updatedStationFields); err != nil {
+	if err := json.NewDecoder(body).Decode(&updatedStationFields); err != nil {
 		return nil, malformedBody()
 	}
 
