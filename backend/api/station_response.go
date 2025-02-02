@@ -1,4 +1,4 @@
-package api
+package main
 
 type StationResponseSingular struct {
 	StationEntity

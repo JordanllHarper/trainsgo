@@ -1,4 +1,4 @@
-package api
+package main
 
 import (
 	"encoding/json"
@@ -88,7 +88,7 @@ func handleStations(w http.ResponseWriter, r *http.Request, db *gorm.DB) error {
 	return nil
 }
 
-func Run() {
+func main() {
 	// db
 	dsn := "root:@tcp(127.0.0.1:3306)/trainsgo?charset=utf8mb4&parseTime=True"
 	db, err := gorm.Open(

@@ -1,4 +1,4 @@
-package api
+package main
 
 import (
 	"encoding/json"
@@ -43,9 +43,7 @@ func onTrainPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	}
 
 	var train common.Train
-	decoder := json.NewDecoder(body)
-	err := decoder.Decode(&train)
-	if err != nil {
+	if err := json.NewDecoder(body).Decode(&train); err != nil {
 		return nil, malformedBody()
 	}
 
@@ -70,9 +68,7 @@ func onTrainPut(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	}
 
 	var updatedTrainFields common.Train
-	decoder := json.NewDecoder(body)
-	err = decoder.Decode(&updatedTrainFields)
-	if err != nil {
+	if err := json.NewDecoder(body).Decode(&updatedTrainFields); err != nil {
 		return nil, malformedBody()
 	}
 

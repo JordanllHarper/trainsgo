@@ -1,4 +1,4 @@
-package api
+package main
 
 import (
 	"encoding/json"
@@ -41,9 +41,7 @@ func onStationPost(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	}
 
 	var station common.Station
-	decoder := json.NewDecoder(body)
-	err := decoder.Decode(&station)
-	if err != nil {
+	if err := json.NewDecoder(body).Decode(&station); err != nil {
 		return nil, malformedBody()
 	}
 
@@ -68,9 +66,7 @@ func onStationPut(db *gorm.DB, req *http.Request) (ResponseBody, HttpError) {
 	}
 
 	var updatedStationFields common.Station
-	decoder := json.NewDecoder(body)
-	err = decoder.Decode(&updatedStationFields)
-	if err != nil {
+	if err := json.NewDecoder(body).Decode(updatedStationFields); err != nil {
 		return nil, malformedBody()
 	}
 
