@@ -1,6 +1,10 @@
 package engine
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/JordanllHarper/trainsgo/backend/common"
+)
 
 /*
 TODO:
@@ -9,46 +13,43 @@ Setup registering new trains
 Simulate all our trains moving - incrementing and decrementing coordinates
 */
 
-type PlaybackEvents int
-
-const (
-	// Will refresh the simulation and move back to a starting state or restart
-	RestartSimulation PlaybackEvents = iota
-	PauseSimulation
-	UnpauseSimulation
-	QuitSimulation
-)
-
-type Event struct {
-	currentEngineState EngineState
-	pbEvents           PlaybackEvents
+func log(message string) {
+	fmt.Println("ENGINE:", message)
 }
 
-func NewEvent(currentEngineState EngineState, pbEvents PlaybackEvents) Event {
-	return Event{
-		currentEngineState, pbEvents,
+func handlePlaybackEvent(pbEvent PlaybackEvent, currentState *EngineState, stateOut chan EngineState) bool {
+
+	switch pbEvent {
+	case PauseSimulation:
+		currentState.processPause(stateOut)
+	case QuitSimulation:
+		log("Quitting simulation...")
+		return false
+	case RestartSimulation:
+		currentState.processRestart(stateOut)
+	case UnpauseSimulation:
+		currentState.processUnpause(stateOut)
+	default:
+		panic(fmt.Sprintf("Unexpected playback event: %#v", pbEvent.pretty()))
 	}
+	return true
 }
 
-func Run(in_events chan Event, state_out chan EngineState) error {
-	for {
-		x := <-in_events
-		// fmt.Printf("Received event %v", x)
+func Run(inEvents chan Event, stateOut chan EngineState) error {
 
-		switch s := x.currentEngineState; x.pbEvents {
-		case PauseSimulation:
-			s.processPause(state_out)
-		case QuitSimulation:
-			fmt.Println("Quitting...")
-			return nil
-		case RestartSimulation:
-			s.processRestart(state_out)
-		case UnpauseSimulation:
-			s.processUnpause(state_out)
-		default:
-			panic(fmt.Sprintf("Unexpected event: %#v", x.pbEvents))
+	currentState := NewEngineState([]common.Train{}, Running)
+	stateOut <- currentState
+	run := true
+	for run {
+		event := <-inEvents
+		if event.PlaybackEvent != nil {
+			pbEvent := *event.PlaybackEvent
+			run = handlePlaybackEvent(pbEvent, &currentState, stateOut)
 		}
+		if event.TrainEvent != nil {
+			tEvent := event.TrainEvent
 
+		}
 	}
-
+	return nil
 }

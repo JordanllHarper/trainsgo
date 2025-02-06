@@ -45,20 +45,38 @@ func NewEngineState(trains []common.Train, status EngineStatus) EngineState {
 	return EngineState{trains, status}
 }
 
-func (e EngineState) processRestart(stateOut chan EngineState) {
-	stateOut <- NewEngineState([]common.Train{}, Restarting)
-	// this might get more complicated if we need to restart trains, but we'll just clear them for now
-	stateOut <- NewEngineState([]common.Train{}, Running)
+func (s *EngineState) processRestart(stateOut chan EngineState) {
+	s.Status = Restarting
+	stateOut <- *s
+	s.Status = Running
+	stateOut <- *s
 }
 
-func (e EngineState) processPause(stateOut chan EngineState) {
-	stateOut <- NewEngineState(e.Trains, Pausing)
-	// Some logic
-	stateOut <- NewEngineState(e.Trains, Paused)
+func (s *EngineState) processPause(stateOut chan EngineState) {
+	s.Status = Pausing
+	stateOut <- *s
+	s.Status = Paused
+	stateOut <- *s
 }
 
-func (e EngineState) processUnpause(stateOut chan EngineState) {
-	stateOut <- NewEngineState(e.Trains, Unpausing)
-	// Some logic
-	stateOut <- NewEngineState(e.Trains, Unpaused)
+func (s *EngineState) processUnpause(stateOut chan EngineState) {
+	s.Status = Unpausing
+	stateOut <- *s
+	s.Status = Running
+	stateOut <- *s
+}
+
+func (s *EngineState) processTrainEvent(event TrainEvent) {
+	switch event.EventType() {
+
+	case CreateTrain:
+		e := event.(EventCreateTrain)
+
+		s.Trains = append(s.Trains, e.TrainToAdd)
+		// handle creating a train
+	case DeleteTrain:
+		// handle deleting a train
+	default:
+		panic("unexpected engine.TrainEventType")
+	}
 }
