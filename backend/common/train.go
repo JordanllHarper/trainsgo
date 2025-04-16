@@ -11,6 +11,7 @@ const (
 	Travelling   Status = "Travelling"
 	Transferring        = "Transferring"
 	Unused              = "Unused"
+	Arrived             = "Arrived"
 	Emergency           = "Emergency"
 )
 

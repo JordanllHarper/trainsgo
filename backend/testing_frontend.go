@@ -11,13 +11,34 @@ import (
 	"github.com/JordanllHarper/trainsgo/backend/engine"
 )
 
-func monitorAndPrintState(responses chan engine.EngineResponse) {
+func printStateResponse(r engine.EngineResponse) {
+	fmt.Printf("STATE: %v\n", r.Status.ToString())
+	fmt.Printf("TRAINS: %v\n", common.MapToString(r.Trains))
+	fmt.Printf("STATIONS: %v\n", common.MapToString(r.Stations))
+	fmt.Printf("JOURNEYS: %v\n", common.SliceToString(r.Journeys))
+	fmt.Printf("CODE: %v\n", r.ResponseCode.ToString())
+}
+
+func printStateEvent(e engine.EngineEvent) {
+	fmt.Println("!!! EVENT !!!")
+	fmt.Printf("STATE: %v\n", e.Status.ToString())
+	fmt.Printf("TRAINS: %v\n", common.MapToString(e.Trains))
+	fmt.Printf("STATIONS: %v\n", common.MapToString(e.Stations))
+	fmt.Printf("JOURNEYS: %v\n", common.SliceToString(e.Journeys))
+	fmt.Printf("CODE: %v\n", e.EventCode.ToString())
+}
+
+func monitorAndPrintResponse(responses chan engine.EngineResponse) {
 	for {
-		response := <-responses
-		fmt.Printf("STATE: %v\n", response.Status.ToString())
-		fmt.Printf("TRAINS: %v\n", common.ArrayToString(response.Trains))
-		fmt.Printf("STATIONS: %v\n", common.ArrayToString(response.Stations))
-		fmt.Printf("CODE: %v\n", response.ResponseCode.ToString())
+		r := <-responses
+		printStateResponse(r)
+	}
+}
+
+func monitorAndPrintEvent(events chan engine.EngineEvent) {
+	for {
+		e := <-events
+		printStateEvent(e)
 	}
 }
 
@@ -35,30 +56,48 @@ func generateHelp(opts []help) string {
 
 func main() {
 
-	events := make(chan engine.Event)
-	responses := make(chan engine.EngineResponse)
+	inEvents := make(chan engine.Event)
+	outResponses := make(chan engine.EngineResponse)
+	outEvents := make(chan engine.EngineEvent)
 
-	help := generateHelp([]help{
-		{"p", "[P]lay/Pause"},
-		{"r", "[R]estart"},
-		{"ct", "[C]reate new test [t]rain"},
-		{"cs", "[C]reate new test [s]tation*s*"},
-		// TODO: {"cj", "[C]reate new test [j]ourney"},
-		{"d", "[D]elete test train"},
-		{"q", "[Q]uit"},
-		{"h", "[H]elp"},
-	},
-	)
+	go engine.Run(inEvents, outResponses, outEvents)
+	go monitorAndPrintResponse(outResponses)
+	go monitorAndPrintEvent(outEvents)
 
-	go engine.Run(events, responses)
-	go monitorAndPrintState(responses)
+	select {
+	case r := <-outResponses:
+		if r.ResponseCode == engine.Success {
+			printStateResponse(r)
+			break
+		} else {
+			log.Fatalf("Response code was not success, exiting %v\n", r.ResponseCode.ToString())
+		}
+	}
 
-	reader := bufio.NewReader(os.Stdin)
-	run := true
+	err := loop(inEvents)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
 
-	fmt.Println(help)
-	for run {
-		text, err := reader.ReadString('\n')
+	fmt.Println("Quitting...")
+}
+
+var h string = generateHelp([]help{
+	{"p", "[P]lay/Pause"},
+	{"r", "[R]estart"},
+	{"ct", "[C]reate new test [t]rain"},
+	{"cs", "[C]reate new test [s]tation*s*"},
+	{"cj", "[C]reate new test [j]ourney"},
+	{"d", "[D]elete test train"},
+	{"q", "[Q]uit"},
+	{"h", "[H]elp"},
+},
+)
+
+func loop(events chan engine.Event) error {
+	fmt.Println("Press h for [H]elp")
+	for {
+		text, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil {
 			log.Fatalln("Error:", err)
 		}
@@ -70,20 +109,27 @@ func main() {
 			events <- engine.NewPlaybackEvent(engine.RestartSimulation)
 		case "ct":
 			events <- engine.NewTrainEvent(engine.NewEventCreateTrain(
-				common.NewTrain("test", 3, common.Coordinates{X: 0, Y: 0}, common.Unused)),
+				common.NewTrain("testTrain", 1, common.Coordinates{X: 0, Y: 0}, common.Unused)),
 			)
-
 		case "cs":
-			events <- engine.NewStationEvent(engine.NewEventCreateStation(
-				common.NewStation("test", common.Coordinates{X: 0, Y: 0})),
+			events <- engine.NewStationEvents(
+				[]engine.StationEvent{
+					engine.NewEventCreateStation(common.NewStation("testStation", common.Coordinates{X: 0, Y: 0})),
+					engine.NewEventCreateStation(common.NewStation("testStation2", common.Coordinates{X: 10, Y: 10})),
+				},
+			)
+		case "cj":
+			events <- engine.NewJourneyEvent(
+				engine.NewEventCreateJourney(
+					common.NewJourney("testStation", "testStation2", "testTrain"),
+				),
 			)
 		case "d":
-			events <- engine.NewTrainEvent(engine.NewEventDeleteTrain("test"))
+			events <- engine.NewTrainEvent(engine.NewEventDeleteTrain("testTrain"))
 		case "q":
-			run = false
+			return nil
 		case "h":
-			fmt.Println(help)
+			fmt.Println(h)
 		}
 	}
-	fmt.Println("Quitting...")
 }

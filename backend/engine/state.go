@@ -8,6 +8,7 @@ import (
 
 const (
 	Restarting EngineStatus = iota
+	Initialised
 	Running
 	Pausing
 	Paused
@@ -19,15 +20,18 @@ type (
 
 	// The state we will send to consumers.
 	EngineState struct {
-		Trains      []common.Train
-		Stations    []common.Station
-		Status      EngineStatus
+		Trains   map[string]*common.Train
+		Stations map[string]common.Station
+		Journeys []simJourney
+		Status   EngineStatus
+		// internal so listeners can't publish responses unless they have a reference to their channel
 		responseOut chan EngineResponse
+		eventOut    chan EngineEvent
 	}
 )
 
-func NewEngineState(status EngineStatus, stateOut chan EngineResponse) EngineState {
-	return EngineState{[]common.Train{}, []common.Station{}, status, stateOut}
+func NewEngineState(status EngineStatus, stateOut chan EngineResponse, eventOut chan EngineEvent) EngineState {
+	return EngineState{map[string]*common.Train{}, map[string]common.Station{}, []simJourney{}, status, stateOut, eventOut}
 }
 
 func (s EngineStatus) ToString() string {
@@ -42,7 +46,8 @@ func (s EngineStatus) ToString() string {
 		return "Running"
 	case Unpausing:
 		return "Unpausing"
-	default:
-		panic(fmt.Sprintf("unexpected engine.EngineStatus num: %#v", s))
+	case Initialised:
+		return "Initialised"
 	}
+	panic(fmt.Sprintf("unexpected engine.EngineStatus num: %#v", s))
 }

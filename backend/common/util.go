@@ -17,7 +17,22 @@ func RemoveIndexSliceCopied[K any](s []K, i int) []K {
 	return append(ret, s[i+1:]...)
 }
 
-func ArrayToString[K any](items []K) string {
+func MapToString[K comparable, V any](items map[K]V) string {
+	if len(items) == 0 {
+		return "[]"
+	}
+
+	s := "{\n"
+	suf := ",\n"
+	for key, value := range items {
+		s = fmt.Sprintf("%s%v: %v%s", s, key, value, suf)
+	}
+	s = fmt.Sprintf("%s}", s)
+
+	return s
+}
+
+func SliceToString[K any](items []K) string {
 	if len(items) == 0 {
 		return "[]"
 	}

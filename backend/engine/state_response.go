@@ -3,13 +3,16 @@ package engine
 import "fmt"
 
 type ResponseCode int
+type EventCode int
 
 const (
-	Success ResponseCode = iota
-	Initialised
-	NoOp            // for when the command will do nothing
-	InvalidCreation // when the user tries to create an invalid entity
-	InvalidDeletion // when the user tries to delete an entity that they shouldn't be able to (e.g. a station that has a train travelling to it)
+	Success         ResponseCode = iota
+	NoOp                         // for when the command will do nothing
+	InvalidCreation              // when the user tries to create an invalid entity
+	InvalidDeletion              // when the user tries to delete an entity that they shouldn't be able to (e.g. a station that has a train travelling to it)
+
+	Started EventCode = iota
+	Updated
 )
 
 type EngineResponse struct {
@@ -17,14 +20,21 @@ type EngineResponse struct {
 	ResponseCode
 }
 
+type EngineEvent struct {
+	EngineState
+	EventCode
+}
+
+func NewEngineEvent(state EngineState, e EventCode) EngineEvent {
+	return EngineEvent{state, e}
+}
+
 func NewEngineResponse(state EngineState, r ResponseCode) EngineResponse {
 	return EngineResponse{state, r}
 }
 
-func (rc ResponseCode) ToString() string {
-	switch rc {
-	case Initialised:
-		return "Initialised"
+func (r ResponseCode) ToString() string {
+	switch r {
 	case InvalidCreation:
 		return "Invalid Creation"
 	case InvalidDeletion:
@@ -34,6 +44,17 @@ func (rc ResponseCode) ToString() string {
 	case Success:
 		return "Success"
 	default:
-		panic(fmt.Sprintf("unexpected ResponseCode: %#v", rc))
+		panic(fmt.Sprintf("unexpected ResponseCode: %#v", r))
+	}
+}
+
+func (e EventCode) ToString() string {
+	switch e {
+	case Started:
+		return "Started"
+	case Updated:
+		return "Updated"
+	default:
+		panic(fmt.Sprintf("unexpected EventCode: %#v", e))
 	}
 }
