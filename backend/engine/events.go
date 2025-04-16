@@ -15,31 +15,69 @@ const (
 
 	CreateTrain TrainEventType = iota
 	DeleteTrain
+
+	CreateStation StationEventType = iota
+	DeleteStation
 )
 
 type (
-	PlaybackEvent  int
-	TrainEventType int
+	PlaybackEvent    int
+	TrainEventType   int
+	StationEventType int
 
 	EventCreateTrain struct{ common.Train }
 	EventDeleteTrain struct{ name string }
 
+	EventCreateStation struct{ common.Station }
+	EventDeleteStation struct{ name string }
+
 	TrainEvent interface {
 		EventType() TrainEventType
-		ToString() string
+	}
+
+	StationEvent interface {
+		EventType() StationEventType
 	}
 
 	Event struct {
-		*PlaybackEvent
-		TrainEvent
+		pb      *PlaybackEvent
+		train   TrainEvent
+		station StationEvent
 	}
 )
+
+// Create a new event to send to the simulation
+// Provided so batch requests can be sent for more efficient transmission.
+func NewEvent(pbEvents *PlaybackEvent, trainEvent TrainEvent, stationEvent StationEvent) Event {
+	return Event{pbEvents, trainEvent, stationEvent}
+}
+
+//
+
+// Train related functionality
+func NewTrainEvent(e TrainEvent) Event { return Event{nil, e, nil} }
+
+func NewEventCreateTrain(t common.Train) TrainEvent { return EventCreateTrain{t} }
+func NewEventDeleteTrain(name string) TrainEvent    { return EventDeleteTrain{name} }
 
 func (e EventCreateTrain) EventType() TrainEventType { return CreateTrain }
 func (e EventDeleteTrain) EventType() TrainEventType { return DeleteTrain }
 
-func NewEventCreateTrain(t common.Train) TrainEvent { return EventCreateTrain{t} }
-func NewEventDeleteTrain(name string) TrainEvent    { return EventDeleteTrain{name} }
+//
+
+// Station related functionality
+func NewStationEvent(e StationEvent) Event { return Event{nil, nil, e} }
+
+func NewEventCreateStation(t common.Station) StationEvent { return EventCreateStation{t} }
+func NewEventDeleteStation(name string) StationEvent      { return EventDeleteStation{name} }
+
+func (e EventCreateStation) EventType() StationEventType { return CreateStation }
+func (e EventDeleteStation) EventType() StationEventType { return DeleteStation }
+
+//
+
+// Playback control functionality
+func NewPlaybackEvent(e PlaybackEvent) Event { return Event{pb: &e} }
 
 func (event PlaybackEvent) Pretty() string {
 	var s string
@@ -57,13 +95,3 @@ func (event PlaybackEvent) Pretty() string {
 	}
 	return s
 }
-
-func NewEvent(pbEvents *PlaybackEvent, trainEvent TrainEvent) Event {
-	return Event{pbEvents, trainEvent}
-}
-
-func NewPlaybackEvent(e PlaybackEvent) Event { return Event{&e, nil} }
-func NewTrainEvent(e TrainEvent) Event       { return Event{nil, e} }
-
-func (e EventCreateTrain) ToString() string { return fmt.Sprintf("%v", e) }
-func (e EventDeleteTrain) ToString() string { return fmt.Sprintf("%v", e) }

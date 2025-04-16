@@ -11,11 +11,13 @@ import (
 	"github.com/JordanllHarper/trainsgo/backend/engine"
 )
 
-func monitorAndPrintState(states chan engine.EngineState) {
+func monitorAndPrintState(responses chan engine.EngineResponse) {
 	for {
-		state := <-states
-		fmt.Printf("STATE: %v\n", state.Status.ToString())
-		fmt.Printf("TRAINS: %v\n", common.ArrayToString(state.Trains))
+		response := <-responses
+		fmt.Printf("STATE: %v\n", response.Status.ToString())
+		fmt.Printf("TRAINS: %v\n", common.ArrayToString(response.Trains))
+		fmt.Printf("STATIONS: %v\n", common.ArrayToString(response.Stations))
+		fmt.Printf("CODE: %v\n", response.ResponseCode.ToString())
 	}
 }
 
@@ -34,20 +36,22 @@ func generateHelp(opts []help) string {
 func main() {
 
 	events := make(chan engine.Event)
-	states := make(chan engine.EngineState)
+	responses := make(chan engine.EngineResponse)
 
 	help := generateHelp([]help{
 		{"p", "[P]lay/Pause"},
 		{"r", "[R]estart"},
-		{"c", "[C]reate new test train"},
+		{"ct", "[C]reate new test [t]rain"},
+		{"cs", "[C]reate new test [s]tation*s*"},
+		// TODO: {"cj", "[C]reate new test [j]ourney"},
 		{"d", "[D]elete test train"},
 		{"q", "[Q]uit"},
 		{"h", "[H]elp"},
 	},
 	)
 
-	go engine.Run(events, states)
-	go monitorAndPrintState(states)
+	go engine.Run(events, responses)
+	go monitorAndPrintState(responses)
 
 	reader := bufio.NewReader(os.Stdin)
 	run := true
@@ -64,9 +68,14 @@ func main() {
 			events <- engine.NewPlaybackEvent(engine.PauseSimulation)
 		case "r":
 			events <- engine.NewPlaybackEvent(engine.RestartSimulation)
-		case "c":
+		case "ct":
 			events <- engine.NewTrainEvent(engine.NewEventCreateTrain(
 				common.NewTrain("test", 3, common.Coordinates{X: 0, Y: 0}, common.Unused)),
+			)
+
+		case "cs":
+			events <- engine.NewStationEvent(engine.NewEventCreateStation(
+				common.NewStation("test", common.Coordinates{X: 0, Y: 0})),
 			)
 		case "d":
 			events <- engine.NewTrainEvent(engine.NewEventDeleteTrain("test"))

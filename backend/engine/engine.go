@@ -2,14 +2,11 @@ package engine
 
 import (
 	"fmt"
-
-	"github.com/JordanllHarper/trainsgo/backend/common"
 )
 
 /*
 	TODO:
 	Setup registering new stations.
-	Setup registering new trains
 	Simulate all our trains moving - incrementing and decrementing coordinates
 */
 
@@ -35,19 +32,21 @@ func handlePlaybackEvent(pbEvent PlaybackEvent, currentState *EngineState) bool 
 	return true
 }
 
-func Run(inEvents chan Event, stateOut chan EngineState) error {
-	currentState := NewEngineState([]common.Train{}, Running, stateOut)
-	stateOut <- currentState
+func Run(inEvents chan Event, stateOut chan EngineResponse) error {
+	currentState := NewEngineState(Running, stateOut)
+	stateOut <- NewEngineResponse(currentState, Initialised)
 	run := true
 	for run {
 		event := <-inEvents
-		if event.PlaybackEvent != nil {
-			pbEvent := *event.PlaybackEvent
+		if event.pb != nil {
+			pbEvent := *event.pb
 			run = handlePlaybackEvent(pbEvent, &currentState)
 		}
-		if event.TrainEvent != nil {
-			tEvent := event.TrainEvent
-			currentState.processTrainEvent(tEvent)
+		if event.train != nil {
+			currentState.processTrainEvent(event.train)
+		}
+		if event.station != nil {
+			currentState.processStationEvent(event.station)
 		}
 	}
 	return nil
