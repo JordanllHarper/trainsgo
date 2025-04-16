@@ -7,48 +7,47 @@ import (
 )
 
 /*
-TODO:
-Setup registering new stations.
-Setup registering new trains
-Simulate all our trains moving - incrementing and decrementing coordinates
+	TODO:
+	Setup registering new stations.
+	Setup registering new trains
+	Simulate all our trains moving - incrementing and decrementing coordinates
 */
 
 func log(message string) {
 	fmt.Println("ENGINE:", message)
 }
 
-func handlePlaybackEvent(pbEvent PlaybackEvent, currentState *EngineState, stateOut chan EngineState) bool {
+func handlePlaybackEvent(pbEvent PlaybackEvent, currentState *EngineState) bool {
 
 	switch pbEvent {
 	case PauseSimulation:
-		currentState.processPause(stateOut)
+		currentState.processPause()
 	case QuitSimulation:
 		log("Quitting simulation...")
 		return false
 	case RestartSimulation:
-		currentState.processRestart(stateOut)
+		currentState.processRestart()
 	case UnpauseSimulation:
-		currentState.processUnpause(stateOut)
+		currentState.processUnpause()
 	default:
-		panic(fmt.Sprintf("Unexpected playback event: %#v", pbEvent.pretty()))
+		panic(fmt.Sprintf("Unexpected playback event: %#v", pbEvent.Pretty()))
 	}
 	return true
 }
 
 func Run(inEvents chan Event, stateOut chan EngineState) error {
-
-	currentState := NewEngineState([]common.Train{}, Running)
+	currentState := NewEngineState([]common.Train{}, Running, stateOut)
 	stateOut <- currentState
 	run := true
 	for run {
 		event := <-inEvents
 		if event.PlaybackEvent != nil {
 			pbEvent := *event.PlaybackEvent
-			run = handlePlaybackEvent(pbEvent, &currentState, stateOut)
+			run = handlePlaybackEvent(pbEvent, &currentState)
 		}
 		if event.TrainEvent != nil {
 			tEvent := event.TrainEvent
-
+			currentState.processTrainEvent(tEvent)
 		}
 	}
 	return nil

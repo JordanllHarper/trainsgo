@@ -22,11 +22,11 @@ type (
 	TrainEventType int
 
 	EventCreateTrain struct{ common.Train }
-	EventDeleteTrain struct{ common.Train }
+	EventDeleteTrain struct{ name string }
 
 	TrainEvent interface {
 		EventType() TrainEventType
-		Pretty() string
+		ToString() string
 	}
 
 	Event struct {
@@ -38,10 +38,10 @@ type (
 func (e EventCreateTrain) EventType() TrainEventType { return CreateTrain }
 func (e EventDeleteTrain) EventType() TrainEventType { return DeleteTrain }
 
-// create train
-// delete train
+func NewEventCreateTrain(t common.Train) TrainEvent { return EventCreateTrain{t} }
+func NewEventDeleteTrain(name string) TrainEvent    { return EventDeleteTrain{name} }
 
-func (event PlaybackEvent) pretty() string {
+func (event PlaybackEvent) Pretty() string {
 	var s string
 	switch event {
 	case PauseSimulation:
@@ -62,16 +62,8 @@ func NewEvent(pbEvents *PlaybackEvent, trainEvent TrainEvent) Event {
 	return Event{pbEvents, trainEvent}
 }
 
-func NewPlaybackEvent(e PlaybackEvent) Event {
-	return Event{&e, nil}
-}
-func NewTrainEvent(e TrainEvent) Event {
-	return Event{nil, e}
-}
-func (e EventCreateTrain) Pretty() string {
-	return fmt.Sprintf("%v", e)
-}
+func NewPlaybackEvent(e PlaybackEvent) Event { return Event{&e, nil} }
+func NewTrainEvent(e TrainEvent) Event       { return Event{nil, e} }
 
-func (e EventDeleteTrain) Pretty() string {
-	return fmt.Sprintf("%v", e)
-}
+func (e EventCreateTrain) ToString() string { return fmt.Sprintf("%v", e) }
+func (e EventDeleteTrain) ToString() string { return fmt.Sprintf("%v", e) }

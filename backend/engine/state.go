@@ -15,7 +15,7 @@ const (
 	Unpaused
 )
 
-func (s EngineStatus) PrettyPrint() string {
+func (s EngineStatus) ToString() string {
 	switch s {
 	case Paused:
 		return "Paused"
@@ -37,33 +37,34 @@ func (s EngineStatus) PrettyPrint() string {
 // The state we will send to consumers.
 // All trains
 type EngineState struct {
-	Trains []common.Train
-	Status EngineStatus
+	Trains   []common.Train
+	Status   EngineStatus
+	stateOut chan EngineState
 }
 
-func NewEngineState(trains []common.Train, status EngineStatus) EngineState {
-	return EngineState{trains, status}
+func NewEngineState(trains []common.Train, status EngineStatus, stateOut chan EngineState) EngineState {
+	return EngineState{trains, status, stateOut}
 }
 
-func (s *EngineState) processRestart(stateOut chan EngineState) {
+func (s *EngineState) processRestart() {
 	s.Status = Restarting
-	stateOut <- *s
+	s.stateOut <- *s
 	s.Status = Running
-	stateOut <- *s
+	s.stateOut <- *s
 }
 
-func (s *EngineState) processPause(stateOut chan EngineState) {
+func (s *EngineState) processPause() {
 	s.Status = Pausing
-	stateOut <- *s
+	s.stateOut <- *s
 	s.Status = Paused
-	stateOut <- *s
+	s.stateOut <- *s
 }
 
-func (s *EngineState) processUnpause(stateOut chan EngineState) {
+func (s *EngineState) processUnpause() {
 	s.Status = Unpausing
-	stateOut <- *s
+	s.stateOut <- *s
 	s.Status = Running
-	stateOut <- *s
+	s.stateOut <- *s
 }
 
 func (s *EngineState) processTrainEvent(event TrainEvent) {
@@ -71,11 +72,17 @@ func (s *EngineState) processTrainEvent(event TrainEvent) {
 
 	case CreateTrain:
 		e := event.(EventCreateTrain)
-
-		s.Trains = append(s.Trains, e.TrainToAdd)
-		// handle creating a train
+		s.Trains = append(s.Trains, e.Train)
+		s.stateOut <- *s
 	case DeleteTrain:
-		// handle deleting a train
+		e := event.(EventDeleteTrain)
+		for i, t := range s.Trains {
+			if t.Name == e.name {
+				s.Trains = common.RemoveIndexSlice(s.Trains, i)
+				break
+			}
+		}
+		s.stateOut <- *s
 	default:
 		panic("unexpected engine.TrainEventType")
 	}
