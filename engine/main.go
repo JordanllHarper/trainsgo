@@ -1,4 +1,4 @@
-package main
+package engine
 
 import (
 	"bufio"
@@ -7,11 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/JordanllHarper/trainsgo/backend/common"
-	"github.com/JordanllHarper/trainsgo/backend/engine"
+	"github.com/JordanllHarper/trainsgo/common"
 )
 
-func printStateResponse(r engine.EngineResponse) {
+func printStateResponse(r EngineResponse) {
 	fmt.Printf("STATE: %v\n", r.Status.ToString())
 	fmt.Printf("TRAINS: %v\n", common.MapToString(r.Trains))
 	fmt.Printf("STATIONS: %v\n", common.MapToString(r.Stations))
@@ -19,7 +18,7 @@ func printStateResponse(r engine.EngineResponse) {
 	fmt.Printf("CODE: %v\n", r.ResponseCode.ToString())
 }
 
-func printStateEvent(e engine.EngineEvent) {
+func printStateEvent(e EngineEvent) {
 	fmt.Println("!!! EVENT !!!")
 	fmt.Printf("STATE: %v\n", e.Status.ToString())
 	fmt.Printf("TRAINS: %v\n", common.MapToString(e.Trains))
@@ -28,14 +27,14 @@ func printStateEvent(e engine.EngineEvent) {
 	fmt.Printf("CODE: %v\n", e.EventCode.ToString())
 }
 
-func monitorAndPrintResponse(responses chan engine.EngineResponse) {
+func monitorAndPrintResponse(responses chan EngineResponse) {
 	for {
 		r := <-responses
 		printStateResponse(r)
 	}
 }
 
-func monitorAndPrintEvent(events chan engine.EngineEvent) {
+func monitorAndPrintEvent(events chan EngineEvent) {
 	for {
 		e := <-events
 		printStateEvent(e)
@@ -56,17 +55,17 @@ func generateHelp(opts []help) string {
 
 func main() {
 
-	inEvents := make(chan engine.Event)
-	outResponses := make(chan engine.EngineResponse)
-	outEvents := make(chan engine.EngineEvent)
+	inEvents := make(chan Event)
+	outResponses := make(chan EngineResponse)
+	outEvents := make(chan EngineEvent)
 
-	go engine.Run(inEvents, outResponses, outEvents)
+	go Run(inEvents, outResponses, outEvents)
 	go monitorAndPrintResponse(outResponses)
 	go monitorAndPrintEvent(outEvents)
 
 	select {
 	case r := <-outResponses:
-		if r.ResponseCode == engine.Success {
+		if r.ResponseCode == Success {
 			printStateResponse(r)
 			break
 		} else {
@@ -94,7 +93,7 @@ var h string = generateHelp([]help{
 },
 )
 
-func loop(events chan engine.Event) error {
+func loop(events chan Event) error {
 	fmt.Println("Press h for [H]elp")
 	for {
 		text, err := bufio.NewReader(os.Stdin).ReadString('\n')
@@ -104,28 +103,28 @@ func loop(events chan engine.Event) error {
 
 		switch strings.TrimSpace(text) {
 		case "p":
-			events <- engine.NewPlaybackEvent(engine.PauseSimulation)
+			events <- NewPlaybackEvent(PauseSimulation)
 		case "r":
-			events <- engine.NewPlaybackEvent(engine.RestartSimulation)
+			events <- NewPlaybackEvent(RestartSimulation)
 		case "ct":
-			events <- engine.NewTrainEvent(engine.NewEventCreateTrain(
+			events <- NewTrainEvent(NewEventCreateTrain(
 				common.NewTrain("testTrain", 1, common.Coordinates{X: 0, Y: 0}, common.Unused)),
 			)
 		case "cs":
-			events <- engine.NewStationEvents(
-				[]engine.StationEvent{
-					engine.NewEventCreateStation(common.NewStation("testStation", common.Coordinates{X: 0, Y: 0})),
-					engine.NewEventCreateStation(common.NewStation("testStation2", common.Coordinates{X: 10, Y: 10})),
+			events <- NewStationEvents(
+				[]StationEvent{
+					NewEventCreateStation(common.NewStation("testStation", common.Coordinates{X: 0, Y: 0})),
+					NewEventCreateStation(common.NewStation("testStation2", common.Coordinates{X: 10, Y: 10})),
 				},
 			)
 		case "cj":
-			events <- engine.NewJourneyEvent(
-				engine.NewEventCreateJourney(
+			events <- NewJourneyEvent(
+				NewEventCreateJourney(
 					common.NewJourney("testStation", "testStation2", "testTrain"),
 				),
 			)
 		case "d":
-			events <- engine.NewTrainEvent(engine.NewEventDeleteTrain("testTrain"))
+			events <- NewTrainEvent(NewEventDeleteTrain("testTrain"))
 		case "q":
 			return nil
 		case "h":

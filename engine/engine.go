@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/JordanllHarper/trainsgo/backend/common"
@@ -14,17 +15,13 @@ import (
 	Simulate all our trains moving - incrementing and decrementing coordinates
 */
 
-func log(message string) {
-	fmt.Println("ENGINE:", message)
-}
-
 func handlePlaybackEvent(pbEvent PlaybackEvent, currentState *EngineState) bool {
 
 	switch pbEvent {
 	case PauseSimulation:
 		currentState.processPause()
 	case QuitSimulation:
-		log("Quitting simulation...")
+		log.Default().Println("Quitting simulation...")
 		return false
 	case RestartSimulation:
 		currentState.processRestart()
