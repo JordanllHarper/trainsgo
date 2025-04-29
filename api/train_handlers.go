@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/JordanllHarper/trainsgo/backend/common"
+	"github.com/JordanllHarper/trainsgo/common"
 	"gorm.io/gorm"
 	"net/http"
 	"strconv"

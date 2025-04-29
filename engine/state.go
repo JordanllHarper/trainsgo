@@ -1,9 +1,9 @@
-package engine
+package main
 
 import (
 	"fmt"
 
-	"github.com/JordanllHarper/trainsgo/backend/common"
+	"github.com/JordanllHarper/trainsgo/common"
 )
 
 const (

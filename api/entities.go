@@ -1,6 +1,6 @@
 package main
 
-import "github.com/JordanllHarper/trainsgo/backend/common"
+import "github.com/JordanllHarper/trainsgo/common"
 
 type (
 	StationEntity struct {

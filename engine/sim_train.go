@@ -1,6 +1,6 @@
-package engine
+package main
 
-import "github.com/JordanllHarper/trainsgo/backend/common"
+import "github.com/JordanllHarper/trainsgo/common"
 
 type SimTrain struct {
 	common.Train                   // internal state

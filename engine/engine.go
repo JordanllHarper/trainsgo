@@ -1,4 +1,4 @@
-package engine
+package main
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/JordanllHarper/trainsgo/backend/common"
+	"github.com/JordanllHarper/trainsgo/common"
 )
 
 /*

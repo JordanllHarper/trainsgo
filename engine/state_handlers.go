@@ -1,4 +1,4 @@
-package engine
+package main
 
 func (s *EngineState) processRestart() {
 	if s.Status == Restarting {
