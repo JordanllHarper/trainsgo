@@ -101,7 +101,7 @@ func update(currentState *EngineState, ctx context.Context) error {
 	}
 }
 
-func Run(inEvents chan Event, outResponses chan EngineResponse, outEvents chan EngineEvent) error {
+func run(inEvents chan Event, outResponses chan EngineResponse, outEvents chan EngineEvent) error {
 	currentState := NewEngineState(Initialised, outResponses, outEvents)
 	outResponses <- NewEngineResponse(currentState, Success)
 	ctx, cancel := context.WithCancel(context.Background())

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -59,7 +60,7 @@ func main() {
 	outResponses := make(chan EngineResponse)
 	outEvents := make(chan EngineEvent)
 
-	go Run(inEvents, outResponses, outEvents)
+	go run(inEvents, outResponses, outEvents)
 	go monitorAndPrintResponse(outResponses)
 	go monitorAndPrintEvent(outEvents)
 
@@ -82,8 +83,7 @@ func main() {
 }
 
 var h string = generateHelp([]help{
-	{"p", "[P]lay/Pause"},
-	{"r", "[R]estart"},
+	{"p", "[P]layback"}, // pl for unpause, pa for pause, r for restart
 	{"ct", "[C]reate new test [t]rain"},
 	{"cs", "[C]reate new test [s]tation*s*"},
 	{"cj", "[C]reate new test [j]ourney"},
@@ -93,6 +93,26 @@ var h string = generateHelp([]help{
 },
 )
 
+func handlePlaybackSelection(args []string) (Event, error) {
+	subcommand, err := safeSliceAccess(args, 1)
+	if err != nil {
+		return Event{}, errors.New("Invalid playback subcommand")
+	}
+
+	var event Event
+	switch subcommand {
+	case "pl":
+		event = NewPlaybackEvent(UnpauseSimulation)
+	case "pa":
+		event = NewPlaybackEvent(PauseSimulation)
+	case "r":
+		event = NewPlaybackEvent(RestartSimulation)
+
+	}
+
+	return event, nil
+}
+
 func loop(events chan Event) error {
 	fmt.Println("Press h for [H]elp")
 	for {
@@ -101,11 +121,21 @@ func loop(events chan Event) error {
 			log.Fatalln("Error:", err)
 		}
 
-		switch strings.TrimSpace(text) {
+		commandArgs := strings.Split(strings.TrimSpace(text), " ")
+		command, err := safeSliceAccess(commandArgs, 0)
+		if err != nil {
+			log.Println("Did not provide a command, please try again")
+			continue
+		}
+
+		switch command {
 		case "p":
-			events <- NewPlaybackEvent(PauseSimulation)
-		case "r":
-			events <- NewPlaybackEvent(RestartSimulation)
+			pb, err := handlePlaybackSelection(commandArgs[1:])
+			if err != nil {
+				log.Println("Did not provide a suitable subcommand, please try again")
+				continue
+			}
+			events <- pb
 		case "ct":
 			events <- NewTrainEvent(NewEventCreateTrain(
 				common.NewTrain("testTrain", 1, common.Coordinates{X: 0, Y: 0}, common.Unused)),
@@ -129,6 +159,8 @@ func loop(events chan Event) error {
 			return nil
 		case "h":
 			fmt.Println(h)
+		default:
+			fmt.Println("Unrecognised command, please try again or use [h]elp")
 		}
 	}
 }
