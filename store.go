@@ -1,30 +1,19 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 )
 
 type (
-	stationStore interface {
-		getAll() ([]station, error)
-		getById(id id) (station, error)
-		register(s station) error
+	registrar[T any] interface {
+		register(s T) error
 		deregister(id id) error
 	}
 
-	trainStore interface {
-		getAll() ([]train, error)
-		getById(id id) (train, error)
-		register(t train) error
-		deregister(id id) error
-	}
-
-	lineStore interface {
-		getAll() ([]line, error)
-		register(l line) error
-		deregister(id id) error
+	store[T any] interface {
+		all() ([]T, error)
+		getById(id id) (T, error)
 	}
 )
 
@@ -53,18 +42,14 @@ func (ssl *stationStoreLocal) getById(id id) (station, error) {
 	)
 
 	if !found {
-		return station{}, errors.New(
-			fmt.Sprintf(
-				"Station with ID %s doesn't exist",
-				id,
-			),
-		)
+		return station{},
+			errorIdNotFound(id, "Station")
 	}
 
 	return item, nil
 }
 
-func (ssl *stationStoreLocal) getAll() ([]station, error) {
+func (ssl *stationStoreLocal) all() ([]station, error) {
 	return ssl.stations, nil
 }
 
@@ -74,12 +59,7 @@ func (ssl *stationStoreLocal) register(s station) error {
 		func(s2 station) bool {
 			return s.id == s2.id
 		}) {
-		return errors.New(
-			fmt.Sprintf(
-				"Registered station id %s already exists",
-				s.id,
-			),
-		)
+		return idAlreadyExists(s.id, "Station")
 	}
 
 	if slices.ContainsFunc(
@@ -87,11 +67,9 @@ func (ssl *stationStoreLocal) register(s station) error {
 		func(s2 station) bool {
 			return s.position == s2.position
 		}) {
-		return errors.New(
-			fmt.Sprintf(
-				"There is already a station at position %s",
-				s.position,
-			),
+		return fmt.Errorf(
+			"There is already a Station at position %s",
+			s.position,
 		)
 	}
 
@@ -107,7 +85,7 @@ func (ssl *stationStoreLocal) deregister(id id) error {
 
 //
 
-func (tsl *trainStoreLocal) getAll() ([]train, error) {
+func (tsl *trainStoreLocal) all() ([]train, error) {
 	return tsl.trains, nil
 }
 
@@ -120,12 +98,8 @@ func (tsl *trainStoreLocal) getById(id id) (train, error) {
 	)
 
 	if !found {
-		return train{}, errors.New(
-			fmt.Sprintf(
-				"Train with ID %s doesn't exist",
-				id,
-			),
-		)
+		return train{},
+			errorIdNotFound(id, "Train")
 	}
 
 	return t, nil
@@ -135,13 +109,7 @@ func (tsl *trainStoreLocal) register(t train) error {
 	if slices.ContainsFunc(tsl.trains, func(t2 train) bool {
 		return t.id == t2.id
 	}) {
-
-		return errors.New(
-			fmt.Sprintf(
-				"Registered train ID %s already exists",
-				t.id,
-			),
-		)
+		return idAlreadyExists(t.id, "Train")
 	}
 
 	tsl.trains = append(tsl.trains, t)
@@ -156,8 +124,19 @@ func (tsl trainStoreLocal) deregister(id id) error {
 
 //
 
-func (lsl *lineStoreLocal) getAll() ([]line, error) {
+func (lsl *lineStoreLocal) all() ([]line, error) {
 	return lsl.lines, nil
+}
+
+func (lsl *lineStoreLocal) getById(id id) (line, error) {
+	value, found := sliceGet(lsl.lines, func(l line) bool {
+		return l.id == id
+	})
+
+	if !found {
+		return line{}, errorIdNotFound(id, "Line")
+	}
+	return value, nil
 }
 
 func (lsl *lineStoreLocal) register(l line) error {

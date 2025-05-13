@@ -17,12 +17,6 @@ type (
 		id
 		position
 	}
-
-	timetableEntry struct {
-		trainId  id
-		platform int
-		expectedTimes
-	}
 )
 
 func newEntity(pos position) entity {
@@ -34,4 +28,7 @@ func newEntity(pos position) entity {
 
 func (p position) String() string {
 	return fmt.Sprintf("x: %d, y: %d", p.x, p.y)
+}
+func (e entity) String() string {
+	return fmt.Sprintf("Id: %v - %v", e.id, e.position)
 }

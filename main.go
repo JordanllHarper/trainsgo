@@ -2,46 +2,72 @@ package main
 
 import (
 	"fmt"
+	"time"
 )
 
 func main() {
 	ts := &trainStoreLocal{}
 	ss := &stationStoreLocal{}
 	ls := &lineStoreLocal{}
-	doThings(ts, ss, ls)
+	sch := &localScheduler{}
+	register(ss, ls, ts, sch)
+	doThings(ts, ss, ls, sch)
 }
 
-func doThings(ts trainStore, ss stationStore, ls lineStore) {
+func register(
+	sReg registrar[station],
+	lReg registrar[line],
+	tReg registrar[train],
+	sch scheduler,
+) {
 	st1 := newStation(position{0, 0}, "Station 1", 3)
 	st2 := newStation(position{10, 10}, "Station 2", 2)
 
-	err := ss.register(st1)
+	err := sReg.register(st1)
 	nilErrOrPanic(err)
 
-	err = ss.register(st2)
+	err = sReg.register(st2)
 	nilErrOrPanic(err)
 
-	err = ls.register(newLine(st1, st2))
+	err = lReg.register(newLine(st1, st2))
 	nilErrOrPanic(err)
 
 	t1 := newTrain("Train 1", st1)
-	err = ts.register(t1)
+	err = tReg.register(t1)
 	nilErrOrPanic(err)
 
+	err = sch.add(newScheduleEntry(st2.id, t1.id, newExpectedTimes(NewNoneTime(), NewSomeTime(time.Now().Add(5*time.Minute)))))
+	nilErrOrPanic(err)
+}
+
+func doThings(ts store[train], ss store[station], ls store[line], schViewer scheduleViewer) {
 	{
-		train, err := ts.getById(t1.id)
+		trains, err := ts.all()
 		nilErrOrPanic(err)
-		fmt.Println(train)
+		for _, t := range trains {
+			fmt.Printf("%v", t)
+		}
 	}
 	{
-		lines, err := ls.getAll()
+		stations, err := ss.all()
 		nilErrOrPanic(err)
-		fmt.Println(lines)
+		for _, l := range stations {
+			fmt.Println(l)
+		}
 	}
 	{
-		station, err := ss.getById(st1.id)
+		lines, err := ss.all()
 		nilErrOrPanic(err)
-		fmt.Printf("%v\n", station.name)
+		for _, l := range lines {
+			fmt.Println(l)
+		}
+	}
+	{
+		schedules, err := schViewer.all()
+		nilErrOrPanic(err)
+		for _, s := range schedules {
+			fmt.Println(s)
+		}
 	}
 }
 

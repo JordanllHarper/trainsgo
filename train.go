@@ -1,15 +1,27 @@
 package main
 
+import "fmt"
+
 type train struct {
 	entity
-	schedule
 	name string
 }
 
-func newTrain(name string, s station) train {
+func newTrain(
+	name string,
+	s station,
+) train {
 	return train{
-		entity:   newEntity(s.position),
-		schedule: schedule{},
-		name:     name,
+		entity: newEntity(s.position),
+		name:   name,
 	}
+}
+
+func (t train) String() string {
+	return fmt.Sprintf(
+		"%v: %v, %v",
+		t.name,
+		t.entity,
+		t.position,
+	)
 }

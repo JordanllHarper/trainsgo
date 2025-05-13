@@ -1,34 +1,61 @@
 package main
 
+import "fmt"
+
 type (
-	schedule struct {
-		scheduleQueue []scheduleEntry
+	scheduleViewer interface {
+		all() ([]scheduleEntry, error)
+	}
+
+	scheduler interface {
+		add(s scheduleEntry) error
+		remove() (scheduleEntry, error)
+	}
+
+	localScheduler struct {
+		schedules []scheduleEntry
 	}
 
 	scheduleEntry struct {
 		stationId id
+		trainId   id
 		expectedTimes
 	}
 )
 
-func newScheduleEntry(stationId id, expTimes expectedTimes) scheduleEntry {
-	return scheduleEntry{stationId, expTimes}
+func newScheduleEntry(stationId id, trainId id, expTimes expectedTimes) scheduleEntry {
+	return scheduleEntry{stationId, trainId, expTimes}
 }
 
-func (sch *schedule) push(entry scheduleEntry) {
-	newQueue := append(sch.scheduleQueue, entry)
-	sch.scheduleQueue = newQueue
+func (sch *localScheduler) add(entry scheduleEntry) error {
+	newQueue := append(sch.schedules, entry)
+	sch.schedules = newQueue
+	return nil
 }
 
-func (sch *schedule) pop() scheduleEntry {
-	queue := sch.scheduleQueue
+func (sch *localScheduler) remove() (scheduleEntry, error) {
+	queue := sch.schedules
 	deref := queue
 	entry := deref[0]
 	newQueue := deref[1:]
-	sch.scheduleQueue = newQueue
-	return entry
+	sch.schedules = newQueue
+	return entry, nil
 }
 
-func (sch *schedule) view() []scheduleEntry {
-	return sch.scheduleQueue
+func (sch *localScheduler) all() ([]scheduleEntry, error) {
+	return sch.schedules, nil
+}
+
+func (sch *localScheduler) String() string {
+	return fmt.Sprintf("%v", sch.schedules)
+}
+
+func (se scheduleEntry) String() string {
+	return fmt.Sprintf(
+		"station id: %v, trainId: %v, expected arrival: %v, expected departure: %v",
+		se.stationId,
+		se.trainId,
+		se.arrival,
+		se.departure,
+	)
 }

@@ -1,10 +1,11 @@
 package main
 
+import "fmt"
+
 type station struct {
 	entity
 	name             string
 	platforms        int
-	timetable        map[id]timetableEntry
 	surroundingLines []line
 }
 
@@ -14,4 +15,8 @@ func newStation(pos position, name string, platforms int) station {
 		name:      name,
 		platforms: platforms,
 	}
+}
+
+func (s station) String() string {
+	return fmt.Sprintf("%v: num_platforms - %v", s.name, s.platforms)
 }
