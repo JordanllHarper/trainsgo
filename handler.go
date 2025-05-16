@@ -24,67 +24,54 @@ type (
 		lrw storeReaderWriter[Line]
 		sr  storeReader[Station]
 	}
+
+	trainPostBody struct {
+		Name      string `json:"name"`
+		StationId string `json:"stationId"`
+	}
+
+	stationPostBody struct {
+		Name      string `json:"name"`
+		Platforms int    `json:"platforms"`
+		X         int    `json:"x"`
+		Y         int    `json:"y"`
+	}
+
+	linePostBody struct {
+		Name string `json:"name"`
+		One  string `json:"one"`
+		Two  string `json:"two"`
+	}
+
+	putBody struct {
+		Id   string `json:"id"`
+		Name string `json:"name"`
+	}
+
+	deleteBody struct {
+		Id string `json:"id"`
+	}
 )
 
-func newTrainHandler(rw storeReaderWriter[Train], sr storeReader[Station]) trainHandler {
-	return trainHandler{rw, sr}
-}
-
-func newStationHandler(srw storeReaderWriter[Station]) stationHandler {
-	return stationHandler{srw}
-}
-
-func newNavHandler(lrw storeReaderWriter[Line], sr storeReader[Station]) navHandler {
-	return navHandler{lrw, sr}
-}
-
-func (th *trainHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func serve[V Train | Station | Line](
+	w http.ResponseWriter,
+	req *http.Request,
+	rw storeReaderWriter[V],
+	handlePost func(),
+) {
 	method := req.Method
 	log.Printf("Received %s request\n", method)
 	switch method {
 	case "GET":
-		handleGet(rw, req, th.tReaderWriter)
+		handleGet(w, req, rw)
 	case "POST":
-		handleTrainPost(rw, req, th.tReaderWriter, th.sReader)
+		handlePost()
 	case "PUT":
-		handlePut(rw, req, th.tReaderWriter)
+		handlePut(w, req, rw)
 	case "DELETE":
-		handleDelete(rw, req, th.tReaderWriter)
-	}
-}
-
-func (sh *stationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	method := req.Method
-	log.Printf("Received %s request\n", method)
-	switch method {
-	case "GET":
-		handleGet(rw, req, sh.rw)
-	case "POST":
-		handleStationPost(rw, req, sh.rw)
-	case "PUT":
-		handlePut(rw, req, sh.rw)
-	case "DELETE":
-		handleDelete(rw, req, sh.rw)
+		handleDelete(w, req, rw)
 	default:
-		rw.WriteHeader(http.StatusMethodNotAllowed)
-	}
-}
-
-func (nh *navHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	method := req.Method
-	log.Printf("Received %s request\n", method)
-	switch method {
-	case "GET":
-		handleGet(rw, req, nh.lrw)
-	case "POST":
-		handleNavPost(rw, req, nh.lrw, nh.sr)
-		// TODO:
-	case "PUT":
-		handlePut(rw, req, nh.lrw)
-	case "DELETE":
-		handleDelete(rw, req, nh.lrw)
-	default:
-		rw.WriteHeader(http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 
@@ -165,14 +152,58 @@ func handleGet[V Train | Station | Line](
 	}
 }
 
+func handlePut[V any](rw http.ResponseWriter, req *http.Request, store storeWriter[V]) {
+	var v putBody
+
+	err := json.NewDecoder(req.Body).Decode(&v)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	id, err := uuid.Parse(v.Id)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = store.changeName(id, v.Name)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+}
+
+func handleDelete[V any](rw http.ResponseWriter, req *http.Request, store storeWriter[V]) {
+	var v deleteBody
+
+	if err := json.NewDecoder(req.Body).Decode(&v); err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	id, err := uuid.Parse(v.Id)
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err = store.deregister(id); err != nil {
+		http.Error(rw, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rw.WriteHeader(http.StatusOK)
+
+}
+
 func handleTrainPost(rw http.ResponseWriter, req *http.Request, trw storeReaderWriter[Train], ssr storeReader[Station]) {
 	body := req.Body
 	defer body.Close()
 
-	var v struct {
-		Name      string `json:"name"`
-		StationId string `json:"stationId"`
-	}
+	var v trainPostBody
 	err := json.NewDecoder(body).Decode(&v)
 
 	if err != nil {
@@ -199,14 +230,10 @@ func handleTrainPost(rw http.ResponseWriter, req *http.Request, trw storeReaderW
 }
 
 func handleStationPost(rw http.ResponseWriter, req *http.Request, stationStore storeWriter[Station]) {
-	var t struct {
-		Name      string `json:"name"`
-		Platforms int    `json:"platforms"`
-		X         int    `json:"x"`
-		Y         int    `json:"y"`
-	}
 
-	err := json.NewDecoder(req.Body).Decode(&t)
+	var v stationPostBody
+
+	err := json.NewDecoder(req.Body).Decode(&v)
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
 		return
@@ -215,11 +242,11 @@ func handleStationPost(rw http.ResponseWriter, req *http.Request, stationStore s
 	err = stationStore.register(
 		newStation(
 			newPosition(
-				t.X,
-				t.Y,
+				v.X,
+				v.Y,
 			),
-			t.Name,
-			t.Platforms,
+			v.Name,
+			v.Platforms,
 		),
 	)
 
@@ -243,16 +270,12 @@ func handleNavPost(
 	lrw storeReaderWriter[Line],
 	sr storeReader[Station],
 ) {
-	var t struct {
-		Name string `json:"name"`
-		One  string `json:"one"`
-		Two  string `json:"two"`
-	}
+	var v linePostBody
 
-	json.NewDecoder(req.Body).Decode(&t)
+	json.NewDecoder(req.Body).Decode(&v)
 
-	oneId, err := uuid.Parse(t.One)
-	twoId, err := uuid.Parse(t.Two)
+	oneId, err := uuid.Parse(v.One)
+	twoId, err := uuid.Parse(v.Two)
 
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusBadRequest)
@@ -271,7 +294,7 @@ func handleNavPost(
 		return
 	}
 
-	line := newLine(st1, st2, t.Name)
+	line := newLine(st1, st2, v.Name)
 	err = lrw.register(line)
 	if err != nil {
 		switch err.(type) {
@@ -285,57 +308,4 @@ func handleNavPost(
 	}
 
 	rw.WriteHeader(http.StatusCreated)
-}
-
-func handlePut[V any](rw http.ResponseWriter, req *http.Request, store storeWriter[V]) {
-	var t struct {
-		Id   string `json:"id"`
-		Name string `json:"name"`
-	}
-
-	err := json.NewDecoder(req.Body).Decode(&t)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	id, err := uuid.Parse(t.Id)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	err = store.changeName(id, t.Name)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	rw.WriteHeader(http.StatusOK)
-}
-
-func handleDelete[V any](rw http.ResponseWriter, req *http.Request, store storeWriter[V]) {
-	var t struct {
-		Id string `json:"id"`
-	}
-
-	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	id, err := uuid.Parse(t.Id)
-	if err != nil {
-		http.Error(rw, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if err = store.deregister(id); err != nil {
-		// NOTE: We might end up adding error types depending on the deregister implementations
-		http.Error(rw, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	rw.WriteHeader(http.StatusOK)
-
 }

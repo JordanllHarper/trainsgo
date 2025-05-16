@@ -2,8 +2,6 @@ package main
 
 import "github.com/google/uuid"
 
-// Coordinate train and station schedules
-
 type (
 	trip struct {
 		id                         id

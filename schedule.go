@@ -2,20 +2,12 @@ package main
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/google/uuid"
 )
 
 type (
-	scheduleViewer interface {
-		all() (map[id]scheduleEntry, error)
-	}
-
-	scheduler interface {
-		add(s scheduleEntry) error
-		remove(id) error
-	}
-
 	localScheduler struct {
 		schedules map[id]scheduleEntry
 	}
@@ -54,6 +46,15 @@ func (sch *localScheduler) remove(id id) error {
 
 func (sch *localScheduler) all() (map[id]scheduleEntry, error) {
 	return sch.schedules, nil
+}
+
+func (sch *localScheduler) getById(id id) (scheduleEntry, error) {
+	schedule, found := sch.schedules[id]
+	if !found {
+		return scheduleEntry{}, newErrIdNotFound(id, "Schedule Entry")
+	}
+
+	return schedule, nil
 }
 
 func (sch *localScheduler) String() string {
