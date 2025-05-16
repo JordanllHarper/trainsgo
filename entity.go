@@ -6,18 +6,10 @@ import (
 	"github.com/google/uuid"
 )
 
-type (
-	id = uuid.UUID
-
-	position struct {
-		x, y int
-	}
-
-	entity struct {
-		id
-		position
-	}
-)
+type entity struct {
+	id       `json:"id"`
+	position `json:"position"`
+}
 
 func newEntity(pos position) entity {
 	return entity{
@@ -26,9 +18,6 @@ func newEntity(pos position) entity {
 	}
 }
 
-func (p position) String() string {
-	return fmt.Sprintf("x: %d, y: %d", p.x, p.y)
-}
 func (e entity) String() string {
 	return fmt.Sprintf("Id: %v - %v", e.id, e.position)
 }

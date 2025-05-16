@@ -1,48 +1,58 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
 
 type (
 	scheduleViewer interface {
-		all() ([]scheduleEntry, error)
+		all() (map[id]scheduleEntry, error)
 	}
 
 	scheduler interface {
 		add(s scheduleEntry) error
-		remove() (scheduleEntry, error)
+		remove(id) error
 	}
 
 	localScheduler struct {
-		schedules []scheduleEntry
+		schedules map[id]scheduleEntry
 	}
 
 	scheduleEntry struct {
+		id
 		stationId id
 		trainId   id
 		expectedTimes
 	}
 )
 
+func newLocalScheduler() *localScheduler {
+	return &localScheduler{schedules: map[id]scheduleEntry{}}
+}
+
 func newScheduleEntry(stationId id, trainId id, expTimes expectedTimes) scheduleEntry {
-	return scheduleEntry{stationId, trainId, expTimes}
+	return scheduleEntry{
+		id:            uuid.New(),
+		stationId:     stationId,
+		trainId:       trainId,
+		expectedTimes: expTimes,
+	}
 }
 
 func (sch *localScheduler) add(entry scheduleEntry) error {
-	newQueue := append(sch.schedules, entry)
-	sch.schedules = newQueue
+	sch.schedules[entry.id] = entry
 	return nil
 }
 
-func (sch *localScheduler) remove() (scheduleEntry, error) {
-	queue := sch.schedules
-	deref := queue
-	entry := deref[0]
-	newQueue := deref[1:]
-	sch.schedules = newQueue
-	return entry, nil
+func (sch *localScheduler) remove(id id) error {
+	delete(sch.schedules, id)
+
+	return nil
 }
 
-func (sch *localScheduler) all() ([]scheduleEntry, error) {
+func (sch *localScheduler) all() (map[id]scheduleEntry, error) {
 	return sch.schedules, nil
 }
 

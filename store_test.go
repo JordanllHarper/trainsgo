@@ -37,8 +37,8 @@ func Test_stationStoreLocal_getById(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ssl := stationStoreLocal{
-				stations: []station{
-					{
+				stations: map[id]station{
+					uuid.MustParse(id1): {
 						entity: entity{
 							id: uuid.MustParse(id1),
 						},
@@ -101,8 +101,8 @@ func Test_stationStoreLocal_register(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ssl := stationStoreLocal{
-				stations: []station{
-					{
+				stations: map[id]station{
+					uuid.MustParse(id1): {
 						entity: entity{
 							id:       uuid.MustParse(id1),
 							position: dummyPos,

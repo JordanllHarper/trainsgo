@@ -1,7 +1,8 @@
 package main
 
 import (
-	"slices"
+	"fmt"
+	"maps"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,9 +14,9 @@ type (
 		getById(id id) (timetableEntry, error)
 	}
 
-	timetabler interface {
+	timetableHandler interface {
 		add(e timetableEntry) error
-		delay(by time.Duration) error
+		delay(id id, by time.Duration) error
 		cancelAndRemove(id id) error
 	}
 
@@ -29,32 +30,49 @@ type (
 		expectedTimes
 	}
 
-	timetablerImpl struct {
-		timetable []timetableEntry
+	timetableHandlerImpl struct {
+		timetable map[id]timetableEntry
 	}
 )
 
-func (t timetablerImpl) all() ([]timetableEntry, error) {
-	return t.timetable, nil
+func newTimetableHandlerImpl() *timetableHandlerImpl {
+	return &timetableHandlerImpl{timetable: map[id]timetableEntry{}}
 }
 
-func (t timetablerImpl) getById(id id) (timetableEntry, error) {
-	value, found := sliceGet(t.timetable, func(v timetableEntry) bool {
-		return id == v.id
-	})
+/*
+Delays a timetable by a given duration and returns it.
+
+Assumes that the arrival time isSome.
+*/
+func (entry timetableEntry) delayed(by time.Duration) timetableEntry {
+	newEntryTime := entry.arrival.value.Add(by)
+	entry.timetableStatus = Delayed
+	entry.arrival = newSomeTime(newEntryTime)
+	return entry
+}
+
+func (t timetableHandlerImpl) all() (map[id]timetableEntry, error) {
+	// When viewing, we don't want to expose an underlying slice to the caller, this should be "by value" slice (they get a copy)
+	return maps.Clone(t.timetable), nil
+}
+
+func (t timetableHandlerImpl) getById(id id) (timetableEntry, error) {
+
+	value, found := t.timetable[id]
 
 	if !found {
-		return timetableEntry{}, errorIdNotFound(id, "Timetable entry")
+		return timetableEntry{}, newErrIdNotFound(id, "Timetable entry")
 	}
 
 	return value, nil
 }
 
-func (t timetablerImpl) add(e timetableEntry) error {
-	if slices.ContainsFunc(t.timetable, func(e2 timetableEntry) bool {
-		return e.id == e2.id
-	}) {
-		return idAlreadyExists(e.id, "Timetable Entry")
+func (t timetableHandlerImpl) add(e timetableEntry) error {
+
+	_, found := t.timetable[e.id]
+
+	if found {
+		return newErrIdAlreadyExists(e.id, "Timetable Entry")
 	}
 
 	/*
@@ -63,17 +81,54 @@ func (t timetablerImpl) add(e timetableEntry) error {
 		- think about this more ...
 	*/
 
-	t.timetable = append(t.timetable, e)
+	t.timetable[e.id] = e
 
 	return nil
 }
 
-func (t timetablerImpl) delay(by time.Duration) error {
-	panic("not implemented") // TODO: Implement
+type delayWithNoArrivalTime struct {
+	id
+	delay time.Duration
 }
 
-func (t timetablerImpl) cancelAndRemove(id id) error {
-	panic("not implemented") // TODO: Implement
+func (err delayWithNoArrivalTime) Error() string {
+	return fmt.Sprintf("Attempted to delay Timetable Entry ID %v by %v, but arrivalTime was None", err.id, err.delay)
+}
+
+func newDelayWithNoArrivalTime(id id, delay time.Duration) error {
+	return delayWithNoArrivalTime{id, delay}
+}
+
+func (t timetableHandlerImpl) delay(id id, by time.Duration) error {
+
+	value, found := t.timetable[id]
+
+	if !found {
+		return newErrIdNotFound(id, "Timetable Entry")
+	}
+
+	if !value.arrival.isSome {
+		// we can't delay if the entry doesn't have an arrival time
+		return newDelayWithNoArrivalTime(id, by)
+	}
+
+	t.timetable[id] = value.delayed(by)
+
+	return nil
+}
+
+func (t timetableHandlerImpl) cancelAndRemove(id id) error {
+	value, found := t.timetable[id]
+
+	value.timetableStatus = Cancelled
+
+	if !found {
+		return newErrIdNotFound(id, "Timetable Entry")
+	}
+
+	t.timetable[id] = value
+
+	return nil
 }
 
 const (

@@ -1,35 +1,21 @@
 package main
 
 import (
-	"fmt"
 	"time"
 )
 
-type optionalTime struct {
-	t      time.Time
-	isSome bool
+func newSomeTime(t time.Time) optional[time.Time] {
+	return optional[time.Time]{t, true}
 }
 
-func NewSomeTime(t time.Time) optionalTime {
-	return optionalTime{t, true}
-}
-
-func NewNoneTime() optionalTime {
-	return optionalTime{time.Time{}, false}
+func newNoneTime() optional[time.Time] {
+	return optional[time.Time]{time.Time{}, false}
 }
 
 type expectedTimes struct {
-	arrival, departure optionalTime
+	arrival, departure optional[time.Time]
 }
 
-func newExpectedTimes(arrival, departure optionalTime) expectedTimes {
+func newExpectedTimes(arrival, departure optional[time.Time]) expectedTimes {
 	return expectedTimes{arrival, departure}
-}
-
-func (ot optionalTime) String() string {
-	if ot.isSome {
-		return fmt.Sprintf("%v", ot.t)
-	} else {
-		return fmt.Sprintf("None")
-	}
 }
