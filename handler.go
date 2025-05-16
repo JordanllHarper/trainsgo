@@ -12,16 +12,16 @@ import (
 
 type (
 	trainHandler struct {
-		tReader storeReaderWriter[Train]
-		sReader storeReader[Station]
+		tReaderWriter storeReaderWriter[Train]
+		sReader       storeReader[Station]
 	}
 
 	stationHandler struct {
-		store storeReaderWriter[Station]
+		rw storeReaderWriter[Station]
 	}
 
 	lineHandler struct {
-		store storeReaderWriter[Line]
+		rw storeReaderWriter[Line]
 	}
 )
 
@@ -30,13 +30,13 @@ func (th *trainHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	log.Printf("Received %s request\n", method)
 	switch method {
 	case "GET":
-		handleGet(rw, req, th.sReader)
+		handleGet(rw, req, th.tReaderWriter)
 	case "POST":
-		handleTrainPost(rw, req, th.tReader, th.sReader)
+		handleTrainPost(rw, req, th.tReaderWriter, th.sReader)
 	case "PUT":
-		handlePut(rw, req, th.tReader)
+		handlePut(rw, req, th.tReaderWriter)
 	case "DELETE":
-		handleDelete(rw, req, th.tReader)
+		handleDelete(rw, req, th.tReaderWriter)
 	}
 }
 
@@ -45,13 +45,13 @@ func (sh *stationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	log.Printf("Received %s request\n", method)
 	switch method {
 	case "GET":
-		handleGet(rw, req, sh.store)
+		handleGet(rw, req, sh.rw)
 	case "POST":
-		handleStationPost(rw, req, sh.store)
+		handleStationPost(rw, req, sh.rw)
 	case "PUT":
-		handlePut(rw, req, sh.store)
+		handlePut(rw, req, sh.rw)
 	case "DELETE":
-		handleDelete(rw, req, sh.store)
+		handleDelete(rw, req, sh.rw)
 	}
 
 }
@@ -139,7 +139,7 @@ func handleTrainPost(rw http.ResponseWriter, req *http.Request, trw storeReaderW
 
 	var v struct {
 		Name      string `json:"name"`
-		StationId string `json:"station_id"`
+		StationId string `json:"stationId"`
 	}
 	err := json.NewDecoder(body).Decode(&v)
 
