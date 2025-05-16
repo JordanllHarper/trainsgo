@@ -20,8 +20,9 @@ type (
 		rw storeReaderWriter[Station]
 	}
 
-	lineHandler struct {
-		rw storeReaderWriter[Line]
+	navHandler struct {
+		lrw storeReaderWriter[Line]
+		sr  storeReader[Station]
 	}
 )
 
@@ -31,6 +32,10 @@ func newTrainHandler(rw storeReaderWriter[Train], sr storeReader[Station]) train
 
 func newStationHandler(srw storeReaderWriter[Station]) stationHandler {
 	return stationHandler{srw}
+}
+
+func newNavHandler(lrw storeReaderWriter[Line], sr storeReader[Station]) navHandler {
+	return navHandler{lrw, sr}
 }
 
 func (th *trainHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -60,8 +65,27 @@ func (sh *stationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		handlePut(rw, req, sh.rw)
 	case "DELETE":
 		handleDelete(rw, req, sh.rw)
+	default:
+		rw.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
 
+func (nh *navHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	method := req.Method
+	log.Printf("Received %s request\n", method)
+	switch method {
+	case "GET":
+		handleGet(rw, req, nh.lrw)
+	case "POST":
+		handleNavPost(rw, req, nh.lrw, nh.sr)
+		// TODO:
+	case "PUT":
+		handlePut(rw, req, nh.lrw)
+	case "DELETE":
+		handleDelete(rw, req, nh.lrw)
+	default:
+		rw.WriteHeader(http.StatusMethodNotAllowed)
+	}
 }
 
 func handleGet[V Train | Station | Line](
@@ -210,6 +234,56 @@ func handleStationPost(rw http.ResponseWriter, req *http.Request, stationStore s
 		http.Error(rw, err.Error(), code)
 		return
 	}
+	rw.WriteHeader(http.StatusCreated)
+}
+
+func handleNavPost(
+	rw http.ResponseWriter,
+	req *http.Request,
+	lrw storeReaderWriter[Line],
+	sr storeReader[Station],
+) {
+	var t struct {
+		Name string `json:"name"`
+		One  string `json:"one"`
+		Two  string `json:"two"`
+	}
+
+	json.NewDecoder(req.Body).Decode(&t)
+
+	oneId, err := uuid.Parse(t.One)
+	twoId, err := uuid.Parse(t.Two)
+
+	if err != nil {
+		http.Error(rw, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	st1, err := sr.getById(oneId)
+	st2, err := sr.getById(twoId)
+	if err != nil {
+		switch err.(type) {
+		case errIdNotFound:
+			http.Error(rw, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	line := newLine(st1, st2, t.Name)
+	err = lrw.register(line)
+	if err != nil {
+		switch err.(type) {
+		case errIdAlreadyExists:
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+		default:
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+
+		}
+		return
+	}
+
 	rw.WriteHeader(http.StatusCreated)
 }
 

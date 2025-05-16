@@ -6,54 +6,39 @@ import (
 	"github.com/google/uuid"
 )
 
+// Describes a connection between 2 nodes
 type (
-	// Describes a connection between 2 nodes
 	Line struct {
 		Id   id     `json:"id"`
 		Name string `json:"name"`
-		One  Node   `json:"one"`
-		Two  Node   `json:"two"`
+		One  id     `json:"one"`
+		Two  id     `json:"two"`
 	}
 
-	// Describes a point where multiple connections can interact
-	intersection struct {
-		E           entity      `json:"entity"`
-		Connections map[id]Line `json:"connections"`
-	}
-
-	navigationStoreLocal struct {
-		lines         map[id]Line
-		intersections map[id]intersection
+	lineStoreLocal struct {
+		lines map[id]Line
 	}
 )
 
-func newNavigationStoreLocal() *navigationStoreLocal {
-	return &navigationStoreLocal{
-		lines:         map[id]Line{},
-		intersections: map[id]intersection{},
-	}
-}
-
-func newLine(one, two Node, name string) Line {
+func newLine(one, two Station, name string) Line {
 	return Line{
 		Id:  uuid.New(),
-		One: one, Two: two,
+		One: one.E.Id, Two: two.E.Id,
 		Name: name,
 	}
 }
 
-func newIntersection(pos position, connections map[id]Line) intersection {
-	return intersection{
-		E:           newEntity(pos),
-		Connections: connections,
+func newLineStoreLocal() *lineStoreLocal {
+	return &lineStoreLocal{
+		lines: map[id]Line{},
 	}
 }
 
-func (nsl *navigationStoreLocal) all() (map[id]Line, error) {
+func (nsl *lineStoreLocal) all() (map[id]Line, error) {
 	return maps.Clone(nsl.lines), nil
 }
 
-func (nsl *navigationStoreLocal) getById(id id) (Line, error) {
+func (nsl *lineStoreLocal) getById(id id) (Line, error) {
 	value, found := nsl.lines[id]
 	if !found {
 		return Line{}, newErrIdNotFound(id, "Line")
@@ -61,7 +46,7 @@ func (nsl *navigationStoreLocal) getById(id id) (Line, error) {
 	return value, nil
 }
 
-func (nsl *navigationStoreLocal) getByName(name string) ([]Line, error) {
+func (nsl *lineStoreLocal) getByName(name string) ([]Line, error) {
 	lines := []Line{}
 	for v := range maps.Values(nsl.lines) {
 		if v.Name == name {
@@ -72,7 +57,17 @@ func (nsl *navigationStoreLocal) getByName(name string) ([]Line, error) {
 	return lines, nil
 }
 
-func (nsl *navigationStoreLocal) register(l Line) error {
+func (lsl *lineStoreLocal) changeName(id id, newName string) error {
+	line, found := lsl.lines[id]
+	if !found {
+		return newErrIdNotFound(id, "Line")
+	}
+	line.Name = newName
+	lsl.lines[id] = line
+	return nil
+}
+
+func (nsl *lineStoreLocal) register(l Line) error {
 	_, found := nsl.lines[l.Id]
 	if found {
 		return newErrIdAlreadyExists(l.Id, "Line")
@@ -82,7 +77,7 @@ func (nsl *navigationStoreLocal) register(l Line) error {
 	return nil
 }
 
-func (nsl *navigationStoreLocal) deregister(id id) error {
+func (nsl *lineStoreLocal) deregister(id id) error {
 	// TODO: Wait for trains to finish using this line, then decommission
 	return nil
 }
