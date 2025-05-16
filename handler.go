@@ -25,6 +25,14 @@ type (
 	}
 )
 
+func newTrainHandler(rw storeReaderWriter[Train], sr storeReader[Station]) trainHandler {
+	return trainHandler{rw, sr}
+}
+
+func newStationHandler(srw storeReaderWriter[Station]) stationHandler {
+	return stationHandler{srw}
+}
+
 func (th *trainHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	method := req.Method
 	log.Printf("Received %s request\n", method)
