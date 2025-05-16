@@ -12,7 +12,7 @@ import (
 
 type (
 	trainHandler struct {
-		tReader storeReaderWriter[train]
+		tReader storeReaderWriter[Train]
 		sReader storeReader[Station]
 	}
 
@@ -21,7 +21,7 @@ type (
 	}
 
 	lineHandler struct {
-		store storeReaderWriter[line]
+		store storeReaderWriter[Line]
 	}
 )
 
@@ -56,7 +56,7 @@ func (sh *stationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 }
 
-func handleGet[V train | Station | line](
+func handleGet[V Train | Station | Line](
 	rw http.ResponseWriter,
 	req *http.Request,
 	store storeReader[V],
@@ -133,7 +133,7 @@ func handleGet[V train | Station | line](
 	}
 }
 
-func handleTrainPost(rw http.ResponseWriter, req *http.Request, trw storeReaderWriter[train], ssr storeReader[Station]) {
+func handleTrainPost(rw http.ResponseWriter, req *http.Request, trw storeReaderWriter[Train], ssr storeReader[Station]) {
 	body := req.Body
 	defer body.Close()
 

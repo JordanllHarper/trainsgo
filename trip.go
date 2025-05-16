@@ -21,7 +21,7 @@ type (
 	}
 )
 
-func newTrip(from, to id, train train) trip {
+func newTrip(from, to id, train Train) trip {
 	// NOTE: not sure if this function would be better taking a station or just the id
 	return trip{
 		id:            uuid.New(),

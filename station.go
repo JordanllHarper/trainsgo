@@ -10,7 +10,7 @@ type (
 		E                entity `json:"entity"`
 		Name             string `json:"name"`
 		Platforms        int    `json:"platforms"`
-		SurroundingLines []line `json:"surroundingLines"`
+		SurroundingLines []Line `json:"surroundingLines"`
 	}
 
 	stationStoreLocal struct {

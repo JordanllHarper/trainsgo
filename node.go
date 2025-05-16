@@ -21,6 +21,6 @@ func (s Station) Id() id             { return s.E.Id }
 func (s Station) Entity() entity     { return s.E }
 func (s Station) NodeType() nodeType { return stationNode }
 
-func (s intersection) Id() id              { return s.entity.Id }
-func (in intersection) Entity() entity     { return in.entity }
+func (s intersection) Id() id              { return s.E.Id }
+func (in intersection) Entity() entity     { return in.E }
 func (in intersection) NodeType() nodeType { return intersectionNode }

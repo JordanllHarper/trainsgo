@@ -8,7 +8,7 @@ import (
 
 type (
 	// Describes a connection between 2 nodes
-	line struct {
+	Line struct {
 		Id   id     `json:"id"`
 		Name string `json:"name"`
 		One  Node   `json:"one"`
@@ -17,52 +17,52 @@ type (
 
 	// Describes a point where multiple connections can interact
 	intersection struct {
-		entity
-		connections map[id]line
+		E           entity      `json:"entity"`
+		Connections map[id]Line `json:"connections"`
 	}
 
 	navigationStoreLocal struct {
-		lines         map[id]line
+		lines         map[id]Line
 		intersections map[id]intersection
 	}
 )
 
 func newNavigationStoreLocal() *navigationStoreLocal {
 	return &navigationStoreLocal{
-		lines:         map[id]line{},
+		lines:         map[id]Line{},
 		intersections: map[id]intersection{},
 	}
 }
 
-func newLine(one, two Node, name string) line {
-	return line{
+func newLine(one, two Node, name string) Line {
+	return Line{
 		Id:  uuid.New(),
 		One: one, Two: two,
 		Name: name,
 	}
 }
 
-func newIntersection(pos position, connections map[id]line) intersection {
+func newIntersection(pos position, connections map[id]Line) intersection {
 	return intersection{
-		entity:      newEntity(pos),
-		connections: connections,
+		E:           newEntity(pos),
+		Connections: connections,
 	}
 }
 
-func (nsl *navigationStoreLocal) all() (map[id]line, error) {
+func (nsl *navigationStoreLocal) all() (map[id]Line, error) {
 	return maps.Clone(nsl.lines), nil
 }
 
-func (nsl *navigationStoreLocal) getById(id id) (line, error) {
+func (nsl *navigationStoreLocal) getById(id id) (Line, error) {
 	value, found := nsl.lines[id]
 	if !found {
-		return line{}, newErrIdNotFound(id, "Line")
+		return Line{}, newErrIdNotFound(id, "Line")
 	}
 	return value, nil
 }
 
-func (nsl *navigationStoreLocal) getByName(name string) ([]line, error) {
-	lines := []line{}
+func (nsl *navigationStoreLocal) getByName(name string) ([]Line, error) {
+	lines := []Line{}
 	for v := range maps.Values(nsl.lines) {
 		if v.Name == name {
 			lines = append(lines, v)
@@ -72,7 +72,7 @@ func (nsl *navigationStoreLocal) getByName(name string) ([]line, error) {
 	return lines, nil
 }
 
-func (nsl *navigationStoreLocal) register(l line) error {
+func (nsl *navigationStoreLocal) register(l Line) error {
 	_, found := nsl.lines[l.Id]
 	if found {
 		return newErrIdAlreadyExists(l.Id, "Line")
