@@ -3,7 +3,7 @@ package main
 type (
 	nodeType int
 
-	node interface {
+	Node interface {
 		Id() id
 		Entity() entity
 		NodeType() nodeType
@@ -17,10 +17,10 @@ const (
 
 // Implementors of node
 
-func (s station) Id() id             { return s.id }
-func (s station) Entity() entity     { return s.entity }
-func (s station) NodeType() nodeType { return stationNode }
+func (s Station) Id() id             { return s.E.Id }
+func (s Station) Entity() entity     { return s.E }
+func (s Station) NodeType() nodeType { return stationNode }
 
-func (s intersection) Id() id              { return s.id }
+func (s intersection) Id() id              { return s.entity.Id }
 func (in intersection) Entity() entity     { return in.entity }
 func (in intersection) NodeType() nodeType { return intersectionNode }

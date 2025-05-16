@@ -27,7 +27,7 @@ func newTrip(from, to id, train train) trip {
 		id:            uuid.New(),
 		fromStationId: from,
 		toStationId:   to,
-		trainId:       train.id,
+		trainId:       train.E.Id,
 	}
 }
 

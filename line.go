@@ -9,9 +9,10 @@ import (
 type (
 	// Describes a connection between 2 nodes
 	line struct {
-		id
-		name     string
-		one, two node
+		Id   id     `json:"id"`
+		Name string `json:"name"`
+		One  Node   `json:"one"`
+		Two  Node   `json:"two"`
 	}
 
 	// Describes a point where multiple connections can interact
@@ -33,11 +34,11 @@ func newNavigationStoreLocal() *navigationStoreLocal {
 	}
 }
 
-func newLine(one, two node, name string) line {
+func newLine(one, two Node, name string) line {
 	return line{
-		id:  uuid.New(),
-		one: one, two: two,
-		name: name,
+		Id:  uuid.New(),
+		One: one, Two: two,
+		Name: name,
 	}
 }
 
@@ -63,7 +64,7 @@ func (nsl *navigationStoreLocal) getById(id id) (line, error) {
 func (nsl *navigationStoreLocal) getByName(name string) ([]line, error) {
 	lines := []line{}
 	for v := range maps.Values(nsl.lines) {
-		if v.name == name {
+		if v.Name == name {
 			lines = append(lines, v)
 		}
 	}
@@ -72,12 +73,12 @@ func (nsl *navigationStoreLocal) getByName(name string) ([]line, error) {
 }
 
 func (nsl *navigationStoreLocal) register(l line) error {
-	_, found := nsl.lines[l.id]
+	_, found := nsl.lines[l.Id]
 	if found {
-		return newErrIdAlreadyExists(l.id, "Line")
+		return newErrIdAlreadyExists(l.Id, "Line")
 	}
 
-	nsl.lines[l.id] = l
+	nsl.lines[l.Id] = l
 	return nil
 }
 

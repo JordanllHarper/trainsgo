@@ -7,17 +7,17 @@ import (
 )
 
 type entity struct {
-	id       `json:"id"`
-	position `json:"position"`
+	Id  id       `json:"id"`
+	Pos position `json:"pos"`
 }
 
 func newEntity(pos position) entity {
 	return entity{
-		id:       uuid.New(),
-		position: pos,
+		Id:  uuid.New(),
+		Pos: pos,
 	}
 }
 
 func (e entity) String() string {
-	return fmt.Sprintf("Id: %v - %v", e.id, e.position)
+	return fmt.Sprintf("Id: %v - %v", e.Id, e.Pos)
 }

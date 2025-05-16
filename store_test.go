@@ -16,15 +16,15 @@ func Test_stationStoreLocal_getById(t *testing.T) {
 		name string // description of this test case
 		// Named input parameters for target function.
 		id      id
-		want    station
+		want    Station
 		wantErr bool
 	}{
 		{
 			name: "Gets Station successfully",
 			id:   uuid.MustParse(id1),
-			want: station{
-				entity: entity{
-					id: uuid.MustParse(id1),
+			want: Station{
+				E: entity{
+					Id: uuid.MustParse(id1),
 				},
 			},
 		},
@@ -37,10 +37,10 @@ func Test_stationStoreLocal_getById(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ssl := stationStoreLocal{
-				stations: map[id]station{
+				stations: map[id]Station{
 					uuid.MustParse(id1): {
-						entity: entity{
-							id: uuid.MustParse(id1),
+						E: entity{
+							Id: uuid.MustParse(id1),
 						},
 					},
 				},
@@ -55,7 +55,7 @@ func Test_stationStoreLocal_getById(t *testing.T) {
 			if tt.wantErr {
 				t.Fatal("getById() succeeded unexpectedly")
 			}
-			if got.id != tt.want.id {
+			if got.E.Id != tt.want.E.Id {
 				t.Errorf("getById() = %v, want %v", got, tt.want)
 			}
 		})
@@ -66,33 +66,33 @@ func Test_stationStoreLocal_register(t *testing.T) {
 	tests := []struct {
 		name string // description of this test case
 		// Named input parameters for target function.
-		s       station
+		s       Station
 		wantErr bool
 	}{
 		{
 			name: "Register station successful",
-			s: station{
-				entity: entity{
-					id: uuid.MustParse(id2),
+			s: Station{
+				E: entity{
+					Id: uuid.MustParse(id2),
 				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "Register station duplicate id",
-			s: station{
-				entity: entity{
-					id: uuid.MustParse(id1),
+			s: Station{
+				E: entity{
+					Id: uuid.MustParse(id1),
 				},
 			},
 			wantErr: true,
 		},
 		{
 			name: "Register station duplicate pos",
-			s: station{
-				entity: entity{
-					id:       uuid.MustParse(id2),
-					position: dummyPos,
+			s: Station{
+				E: entity{
+					Id:  uuid.MustParse(id2),
+					Pos: dummyPos,
 				},
 			},
 			wantErr: true,
@@ -101,11 +101,11 @@ func Test_stationStoreLocal_register(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ssl := stationStoreLocal{
-				stations: map[id]station{
+				stations: map[id]Station{
 					uuid.MustParse(id1): {
-						entity: entity{
-							id:       uuid.MustParse(id1),
-							position: dummyPos,
+						E: entity{
+							Id:  uuid.MustParse(id1),
+							Pos: dummyPos,
 						},
 					},
 				},

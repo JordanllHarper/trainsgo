@@ -7,8 +7,8 @@ import (
 
 type (
 	train struct {
-		entity
-		name string
+		E    entity `json:"entity"`
+		Name string `json:"name"`
 	}
 
 	trainStoreLocal map[id]train
@@ -20,11 +20,11 @@ func newTrainStoreLocal() *trainStoreLocal {
 
 func newTrain(
 	name string,
-	s station,
+	s Station,
 ) train {
 	return train{
-		entity: newEntity(s.position),
-		name:   name,
+		E:    newEntity(s.E.Pos),
+		Name: name,
 	}
 }
 
@@ -34,7 +34,7 @@ func (tsl trainStoreLocal) changeName(id id, newName string) error {
 		return newErrIdNotFound(id, "Train")
 	}
 
-	train.name = newName
+	train.Name = newName
 	tsl[id] = train
 
 	return nil
@@ -43,9 +43,9 @@ func (tsl trainStoreLocal) changeName(id id, newName string) error {
 func (t train) String() string {
 	return fmt.Sprintf(
 		"%v: %v, %v",
-		t.name,
-		t.entity,
-		t.position,
+		t.Name,
+		t.E,
+		t.E.Pos,
 	)
 }
 
@@ -57,7 +57,7 @@ func (tsl trainStoreLocal) all() (map[id]train, error) {
 func (tsl trainStoreLocal) getByName(name string) ([]train, error) {
 	trains := []train{}
 	for t := range maps.Values(tsl) {
-		if t.name == name {
+		if t.Name == name {
 			trains = append(trains, t)
 		}
 	}
@@ -75,13 +75,13 @@ func (tsl trainStoreLocal) getById(id id) (train, error) {
 }
 
 func (tsl trainStoreLocal) register(t train) error {
-	_, found := tsl[t.id]
+	_, found := tsl[t.E.Id]
 
 	if found {
-		return newErrIdAlreadyExists(t.id, "Train")
+		return newErrIdAlreadyExists(t.E.Id, "Train")
 	}
 
-	tsl[t.id] = t
+	tsl[t.E.Id] = t
 
 	return nil
 }

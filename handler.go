@@ -5,7 +5,6 @@ import (
 	"log"
 	"maps"
 	"net/http"
-	"os"
 	"slices"
 
 	"github.com/google/uuid"
@@ -14,11 +13,11 @@ import (
 type (
 	trainHandler struct {
 		tReader storeReaderWriter[train]
-		sReader storeReader[station]
+		sReader storeReader[Station]
 	}
 
 	stationHandler struct {
-		store storeReaderWriter[station]
+		store storeReaderWriter[Station]
 	}
 
 	lineHandler struct {
@@ -57,7 +56,7 @@ func (sh *stationHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 }
 
-func handleGet[V train | station | line](
+func handleGet[V train | Station | line](
 	rw http.ResponseWriter,
 	req *http.Request,
 	store storeReader[V],
@@ -80,8 +79,6 @@ func handleGet[V train | station | line](
 
 		storeValues := maps.Values(all)
 		arr := slices.Collect(storeValues)
-		js, err := json.Marshal(arr)
-		os.Stdout.Write(js)
 
 		response := struct {
 			Values []V `json:"values"`
@@ -136,7 +133,7 @@ func handleGet[V train | station | line](
 	}
 }
 
-func handleTrainPost(rw http.ResponseWriter, req *http.Request, trw storeReaderWriter[train], ssr storeReader[station]) {
+func handleTrainPost(rw http.ResponseWriter, req *http.Request, trw storeReaderWriter[train], ssr storeReader[Station]) {
 	body := req.Body
 	defer body.Close()
 
@@ -169,7 +166,7 @@ func handleTrainPost(rw http.ResponseWriter, req *http.Request, trw storeReaderW
 	rw.WriteHeader(http.StatusCreated)
 }
 
-func handleStationPost(rw http.ResponseWriter, req *http.Request, stationStore storeWriter[station]) {
+func handleStationPost(rw http.ResponseWriter, req *http.Request, stationStore storeWriter[Station]) {
 	var t struct {
 		Name      string `json:"name"`
 		Platforms int    `json:"platforms"`

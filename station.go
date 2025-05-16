@@ -6,20 +6,20 @@ import (
 )
 
 type (
-	station struct {
-		entity           `json:"entity"`
+	Station struct {
+		E                entity `json:"entity"`
 		Name             string `json:"name"`
 		Platforms        int    `json:"platforms"`
-		SurroundingLines []line `json:"surrounding_lines"`
+		SurroundingLines []line `json:"surroundingLines"`
 	}
 
 	stationStoreLocal struct {
-		stations map[id]station
+		stations map[id]Station
 	}
 )
 
 func newStationStoreLocal() *stationStoreLocal {
-	return &stationStoreLocal{stations: map[id]station{}}
+	return &stationStoreLocal{stations: map[id]Station{}}
 }
 
 func (ssl *stationStoreLocal) changeName(id id, newName string) error {
@@ -34,39 +34,39 @@ func (ssl *stationStoreLocal) changeName(id id, newName string) error {
 	return nil
 }
 
-func newStation(pos position, name string, platforms int) station {
-	return station{
-		entity:    newEntity(pos),
+func newStation(pos position, name string, platforms int) Station {
+	return Station{
+		E:         newEntity(pos),
 		Name:      name,
 		Platforms: platforms,
 	}
 }
 
-func (s station) String() string {
+func (s Station) String() string {
 	return fmt.Sprintf(
 		"{ID: %v, Name: %v, Platforms: %v}",
-		s.id,
+		s.E.Id,
 		s.Name,
 		s.Platforms,
 	)
 }
 
-func (ssl *stationStoreLocal) getById(id id) (station, error) {
+func (ssl *stationStoreLocal) getById(id id) (Station, error) {
 	item, found := ssl.stations[id]
 	if !found {
-		return station{},
+		return Station{},
 			newErrIdNotFound(id, "Station")
 	}
 
 	return item, nil
 }
 
-func (ssl *stationStoreLocal) all() (map[id]station, error) {
+func (ssl *stationStoreLocal) all() (map[id]Station, error) {
 	return maps.Clone(ssl.stations), nil
 }
 
-func (ssl *stationStoreLocal) getByName(name string) ([]station, error) {
-	stations := []station{}
+func (ssl *stationStoreLocal) getByName(name string) ([]Station, error) {
+	stations := []Station{}
 	for v := range maps.Values(ssl.stations) {
 		if v.Name == name {
 			stations = append(stations, v)
@@ -93,21 +93,21 @@ func newErrStationAlreadyAtPosition(id id, pos position) errStationAlreadyAtPosi
 	return errStationAlreadyAtPosition{id, pos}
 }
 
-func (ssl *stationStoreLocal) register(s station) error {
+func (ssl *stationStoreLocal) register(s Station) error {
 
-	_, found := ssl.stations[s.id]
+	_, found := ssl.stations[s.E.Id]
 
 	if found {
-		return newErrIdAlreadyExists(s.id, "Station")
+		return newErrIdAlreadyExists(s.E.Id, "Station")
 	}
 
 	for v := range maps.Values(ssl.stations) {
-		if v.position == s.position {
-			return newErrStationAlreadyAtPosition(s.id, s.position)
+		if v.E.Pos == s.E.Pos {
+			return newErrStationAlreadyAtPosition(s.E.Id, s.E.Pos)
 		}
 	}
 
-	ssl.stations[s.id] = s
+	ssl.stations[s.E.Id] = s
 
 	return nil
 }
