@@ -6,62 +6,51 @@ import (
 	"net/http"
 )
 
-func main() {
+type HandlerConfiguration struct {
+	trainHandler   http.Handler
+	stationHandler http.Handler
+	lineHandler    http.Handler
+}
+
+func createDummyConfiguration() HandlerConfiguration {
 
 	trainStore := newTrainStoreLocal()
 	stationStore := newStationStoreLocal()
 	lineStore := newLineStoreLocal()
 
-	{
-		st1 := newStation(newPosition(0, 0), "Station 1", 3)
-		st2 := newStation(newPosition(10, 10), "Station 2", 5)
-		t1 := newTrain("Train 1", st1)
+	st1 := newStation(newPosition(0, 0), "Station 1", 3)
+	st2 := newStation(newPosition(10, 10), "Station 2", 5)
+	t1 := newTrain("Train 1", st1)
 
-		// Registering a bunch of dummy data to test scheduling a train
-		trainStore.register(t1)
-		stationStore.register(st1)
-		stationStore.register(st2)
-		lineStore.register(newLine(st1, st2, "Line 1"))
+	trainStore.register(t1)
+	stationStore.register(st1)
+	stationStore.register(st2)
+	lineStore.register(newLine(st1, st2, "Line 1"))
 
-		fmt.Println(st1.E.Id, st2.E.Id)
+	trainHandlerLocal := trainHandlerLocal{trainStore, stationStore}
+	lineHandlerLocal := lineHandlerLocal{lineStore, stationStore}
 
-		setupHandlers(trainStore, stationStore, lineStore)
+	return HandlerConfiguration{
+		trainHandlerLocal,
+		stationStore,
+		lineHandlerLocal,
 	}
-
-	port := ":8080"
-	fmt.Printf("Listening on: %s\n", port)
-	log.Fatalln(http.ListenAndServe(port, nil))
 }
 
-func setupHandlers(
-	trw storeReaderWriter[Train],
-	srw storeReaderWriter[Station],
-	lrw storeReaderWriter[Line],
-) {
+func main() {
+	config := createDummyConfiguration()
+	{
 
-	http.HandleFunc("/trains", func(w http.ResponseWriter, req *http.Request) {
-		serve(
-			w,
-			req,
-			trw,
-			func() { handleTrainPost(w, req, trw, srw) },
-		)
-	})
-	http.HandleFunc("/stations", func(w http.ResponseWriter, req *http.Request) {
-		serve(
-			w,
-			req,
-			srw,
-			func() { handleStationPost(w, req, srw) },
-		)
-	},
-	)
-	http.HandleFunc("/nav", func(w http.ResponseWriter, req *http.Request) {
-		serve(
-			w,
-			req,
-			lrw,
-			func() { handleNavPost(w, req, lrw, srw) },
-		)
-	})
+		http.Handle("/trains", config.trainHandler)
+		http.Handle("/stations", config.stationHandler)
+		http.Handle("/line", config.lineHandler)
+		// http.HandleFunc("/trip", func(w http.ResponseWriter, req *http.Request) {
+		// 	handleTrip(w, req, tripStore)
+		// })
+	}
+	{
+		port := ":8080"
+		fmt.Printf("Listening on: %s\n", port)
+		log.Fatalln(http.ListenAndServe(port, nil))
+	}
 }

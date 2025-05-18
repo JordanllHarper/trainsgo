@@ -9,46 +9,47 @@ import (
 // Describes a connection between 2 nodes
 type (
 	Line struct {
-		Id   id     `json:"id"`
-		Name string `json:"name"`
-		One  id     `json:"one"`
-		Two  id     `json:"two"`
+		Id         id     `json:"id"`
+		Name       string `json:"name"`
+		StationOne id     `json:"stationOne"`
+		StationTwo id     `json:"stationTwo"`
 	}
 
-	lineStoreLocal struct {
-		lines map[id]Line
-	}
+	lineStoreLocal map[id]Line
 )
+
+type lineHandlerLocal struct {
+	lines    lineStoreLocal
+	stations storeReader[Station]
+}
 
 func newLine(one, two Station, name string) Line {
 	return Line{
-		Id:  uuid.New(),
-		One: one.E.Id, Two: two.E.Id,
+		Id:         uuid.New(),
+		StationOne: one.E.Id, StationTwo: two.E.Id,
 		Name: name,
 	}
 }
 
-func newLineStoreLocal() *lineStoreLocal {
-	return &lineStoreLocal{
-		lines: map[id]Line{},
-	}
+func newLineStoreLocal() lineStoreLocal {
+	return map[id]Line{}
 }
 
-func (nsl *lineStoreLocal) all() (map[id]Line, error) {
-	return maps.Clone(nsl.lines), nil
+func (lsl lineStoreLocal) all() (map[id]Line, *storeReaderError) {
+	return maps.Clone(lsl), nil
 }
 
-func (nsl *lineStoreLocal) getById(id id) (Line, error) {
-	value, found := nsl.lines[id]
+func (lsl lineStoreLocal) getById(id id) (Line, *storeReaderError) {
+	value, found := lsl[id]
 	if !found {
-		return Line{}, newErrIdNotFound(id, "Line")
+		return Line{}, newStoreReaderError(id, "Line", StoreReaderErrIdNotFound)
 	}
 	return value, nil
 }
 
-func (nsl *lineStoreLocal) getByName(name string) ([]Line, error) {
+func (lsl lineStoreLocal) getByName(name string) ([]Line, *storeReaderError) {
 	lines := []Line{}
-	for v := range maps.Values(nsl.lines) {
+	for v := range maps.Values(lsl) {
 		if v.Name == name {
 			lines = append(lines, v)
 		}
@@ -57,27 +58,38 @@ func (nsl *lineStoreLocal) getByName(name string) ([]Line, error) {
 	return lines, nil
 }
 
-func (lsl *lineStoreLocal) changeName(id id, newName string) error {
-	line, found := lsl.lines[id]
+func (lsl lineStoreLocal) changeName(id id, newName string) *storeReaderError {
+	line, found := lsl[id]
 	if !found {
-		return newErrIdNotFound(id, "Line")
+		return newStoreReaderError(id, "Line", StoreReaderErrIdNotFound)
 	}
 	line.Name = newName
-	lsl.lines[id] = line
+	lsl[id] = line
 	return nil
 }
 
-func (nsl *lineStoreLocal) register(l Line) error {
-	_, found := nsl.lines[l.Id]
+type registerLineErrorCode int
+
+const (
+	registerLineErrIdExists registerLineErrorCode = iota
+)
+
+type registerLineError struct {
+	id   id
+	code registerLineErrorCode
+}
+
+func (lsl lineStoreLocal) register(l Line) *registerLineError {
+	_, found := lsl[l.Id]
 	if found {
-		return newErrIdAlreadyExists(l.Id, "Line")
+		return &registerLineError{l.Id, registerLineErrIdExists}
 	}
 
-	nsl.lines[l.Id] = l
+	lsl[l.Id] = l
 	return nil
 }
 
-func (nsl *lineStoreLocal) deregister(id id) error {
+func (lsl lineStoreLocal) delete(id id) *storeDeleterError {
 	// TODO: Wait for trains to finish using this line, then decommission
 	return nil
 }

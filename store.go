@@ -1,41 +1,79 @@
 package main
 
+import "fmt"
+
+const (
+	StoreReaderErrIdNotFound storeReaderErrorCode = iota
+	StoreReaderErrInternalError
+)
+
+const (
+	StoreDeleterErrIdNotFound storeDeleterErrorCode = iota
+	StoreDeleterErrInternalError
+)
+
 type (
-
-	/*
-		Represents something
-
-		Use all() to get all entities in the storeReader or getById() for a specific entity.
-
-		Use getByName() to get a list of T with the appropriate name.
-	*/
 	storeReader[T any] interface {
-		all() (map[id]T, error)
-		getById(id id) (T, error)
-		getByName(name string) ([]T, error)
+		all() (map[id]T, *storeReaderError)
+		getById(id id) (T, *storeReaderError)
 	}
 
-	/*
-		Represents something that holds a storeWriter of T.
-
-		To register() means the network needs to know of a new entity, and will accomodate that.
-
-		deregister() will not immediately delete an entity.
-		It will wait for the entity to finish it's tasks before removing from the network.
-	*/
-	storeWriter[T any] interface {
-		// Register a T with the store.
-		register(s T) error
-
-		// Deregister a T with the store by ID.
-		deregister(id id) error
-
-		// Change the name of a given store item.
-		changeName(id id, newName string) error
+	storeDeleter interface {
+		delete(id id) *storeDeleterError
 	}
 
-	storeReaderWriter[T any] interface {
+	storeReaderDeleter[T any] interface {
 		storeReader[T]
-		storeWriter[T]
+		storeDeleter
+	}
+
+	storeReaderErrorCode int
+
+	storeReaderError struct {
+		id     id
+		entity string
+		code   storeReaderErrorCode
+	}
+
+	storeDeleterErrorCode int
+	storeDeleterError     struct {
+		id     id
+		entity string
+		code   storeDeleterErrorCode
+	}
+
+	storeRenamerErrorCode int
+	storeRenamerError     struct {
+		id     id
+		entity string
+		code   storeRenamerErrorCode
 	}
 )
+
+func (err storeReaderError) Error() string {
+	switch err.code {
+	case StoreReaderErrIdNotFound:
+		return fmt.Sprintf("%s with ID %v doesn't exist", err.entity, err.id)
+	default:
+		return fmt.Sprintf("Unrecognised error id %d", err.code)
+	}
+}
+
+func (err storeDeleterError) Error() string {
+	switch err.code {
+	case StoreDeleterErrIdNotFound:
+		return fmt.Sprintf("%s with ID %v doesn't exist", err.entity, err.id)
+	default:
+		return fmt.Sprintf("Unrecognised error id %d", err.code)
+	}
+}
+
+func newStoreReaderError(id id, entity string, code storeReaderErrorCode) *storeReaderError {
+	err := storeReaderError{id, entity, code}
+	return &err
+}
+
+func newStoreDeleterError(id id, entity string, code storeDeleterErrorCode) *storeDeleterError {
+	err := storeDeleterError{id, entity, code}
+	return &err
+}

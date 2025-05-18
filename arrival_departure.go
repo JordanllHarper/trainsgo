@@ -4,18 +4,11 @@ import (
 	"time"
 )
 
-func newSomeTime(t time.Time) optional[time.Time] {
-	return optional[time.Time]{t, true}
-}
-
-func newNoneTime() optional[time.Time] {
-	return optional[time.Time]{time.Time{}, false}
-}
-
 type expectedTimes struct {
-	arrival, departure optional[time.Time]
+	Arrival   *time.Time `json:"arrival"`
+	Departure *time.Time `json:"departure"`
 }
 
-func newExpectedTimes(arrival, departure optional[time.Time]) expectedTimes {
+func newExpectedTimes(arrival, departure *time.Time) expectedTimes {
 	return expectedTimes{arrival, departure}
 }

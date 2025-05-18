@@ -1,8 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"maps"
+	"net/http"
+
+	"github.com/google/uuid"
 )
 
 type (
@@ -14,8 +18,8 @@ type (
 	trainStoreLocal map[id]Train
 )
 
-func newTrainStoreLocal() *trainStoreLocal {
-	return &trainStoreLocal{}
+func newTrainStoreLocal() trainStoreLocal {
+	return trainStoreLocal{}
 }
 
 func newTrain(
@@ -28,16 +32,19 @@ func newTrain(
 	}
 }
 
-func (tsl trainStoreLocal) changeName(id id, newName string) error {
-	train, found := tsl[id]
+func (tsl trainStoreLocal) all() (map[id]Train, *storeReaderError) {
+	return maps.Clone(tsl), nil
+
+}
+
+func (tsl trainStoreLocal) getById(id id) (Train, *storeReaderError) {
+	t, found := tsl[id]
 	if !found {
-		return newErrIdNotFound(id, "Train")
+		return Train{},
+			newStoreReaderError(id, "Train", StoreReaderErrIdNotFound)
 	}
 
-	train.Name = newName
-	tsl[id] = train
-
-	return nil
+	return t, nil
 }
 
 func (t Train) String() string {
@@ -49,36 +56,22 @@ func (t Train) String() string {
 	)
 }
 
-func (tsl trainStoreLocal) all() (map[id]Train, error) {
-	return maps.Clone(tsl), nil
+type registerTrainErrorCode int
 
+const (
+	registerTrainErrIdExists registerStationErrorCode = iota
+)
+
+type registerTrainError struct {
+	id   id
+	code registerStationErrorCode
 }
 
-func (tsl trainStoreLocal) getByName(name string) ([]Train, error) {
-	trains := []Train{}
-	for t := range maps.Values(tsl) {
-		if t.Name == name {
-			trains = append(trains, t)
-		}
-	}
-	return trains, nil
-}
-
-func (tsl trainStoreLocal) getById(id id) (Train, error) {
-	t, found := tsl[id]
-	if !found {
-		return Train{},
-			newErrIdNotFound(id, "Train")
-	}
-
-	return t, nil
-}
-
-func (tsl trainStoreLocal) register(t Train) error {
+func (tsl trainStoreLocal) register(t Train) *registerTrainError {
 	_, found := tsl[t.E.Id]
 
 	if found {
-		return newErrIdAlreadyExists(t.E.Id, "Train")
+		return &registerTrainError{t.E.Id, registerTrainErrIdExists}
 	}
 
 	tsl[t.E.Id] = t
@@ -86,7 +79,46 @@ func (tsl trainStoreLocal) register(t Train) error {
 	return nil
 }
 
-func (tsl trainStoreLocal) deregister(id id) error {
+func (tsl trainStoreLocal) delete(id id) *storeDeleterError {
 	// TODO: Finish this trains schedule and then remove
 	return nil
+}
+
+type trainHandlerLocal struct {
+	trains   trainStoreLocal
+	stations storeReader[Station]
+}
+
+func (h trainHandlerLocal) handlePost(req *http.Request) (int, any) {
+	body := req.Body
+	defer body.Close()
+
+	var v trainPostBody
+	err := json.NewDecoder(body).Decode(&v)
+
+	if err != nil {
+		return http.StatusBadRequest, errMalformedBody()
+	}
+
+	id, err := uuid.Parse(v.StationId)
+	if err != nil {
+		return http.StatusBadRequest, errorBody{Message: fmt.Sprintf("Bad Station ID: %s", id)}
+	}
+	station, err := h.stations.getById(id)
+
+	t := newTrain(v.Name, station)
+
+	trErr := h.trains.register(t)
+	if trErr != nil {
+		var errBody errorBody
+		switch trErr.code {
+		case registerTrainErrIdExists:
+			errIdExists(trErr.id)
+		default:
+			panic(fmt.Sprintf("unexpected main.registerStationErrorCode: %#v", trErr.code))
+		}
+		return http.StatusInternalServerError, errBody
+	}
+
+	return http.StatusCreated, nil
 }
