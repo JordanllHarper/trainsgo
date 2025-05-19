@@ -5,10 +5,13 @@ import (
 )
 
 type expectedTimes struct {
-	Arrival   *time.Time `json:"arrival"`
-	Departure *time.Time `json:"departure"`
+	Departure time.Time `json:"departure"`
+	Arrival   time.Time `json:"arrival"`
 }
 
-func newExpectedTimes(arrival, departure *time.Time) expectedTimes {
-	return expectedTimes{arrival, departure}
+func newExpectedTimes(arrival, departure time.Time) expectedTimes {
+	return expectedTimes{
+		Arrival:   arrival,
+		Departure: departure,
+	}
 }

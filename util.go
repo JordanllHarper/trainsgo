@@ -1,24 +1,16 @@
 package main
 
-import (
-	"encoding/json"
-	"log"
-	"net/http"
-)
+import "github.com/google/uuid"
 
-func serveJson(
-	w http.ResponseWriter,
-	method string,
-	code int,
-	body any,
-) {
-	log.Printf("Received %s request\n", method)
-
-	w.WriteHeader(code)
-	if body != nil {
-		err := json.NewEncoder(w).Encode(body)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
+func getVByStringId[V any](values storeReader[V], id string) (v V, jsonErr any) {
+	stId, err := uuid.Parse(id)
+	if err != nil {
+		return v, errBadId(id)
 	}
+
+	v, stErr := values.getById(stId)
+	if stErr != nil {
+		return v, errIdDoesntExist(stId)
+	}
+	return v, nil
 }

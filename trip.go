@@ -1,9 +1,13 @@
 package main
 
-import "github.com/google/uuid"
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
 
 type (
-	tripStatus string
+	tripStatus int
 	Trip       struct {
 		Id            id            `json:"id"`
 		FromStationId id            `json:"fromStationId"`
@@ -13,54 +17,58 @@ type (
 		Status        tripStatus    `json:"status"`
 	}
 
-	tripCoordinator interface {
-		scheduleTrip(t Trip) error
-		delayTrip(id id) error
-		cancelTrip(tripId id) error
-	}
-
-	tripReaderCoordinator interface {
-		storeReader[Trip]
-		tripCoordinator
-	}
-
-	tripCoordinatorLocal struct {
-		trips    map[id]Trip
+	tripHandlerLocal struct {
+		trips    tripStoreLocal
 		trains   storeReader[Train]
 		stations storeReader[Station]
 	}
+	tripStoreLocal map[id]Trip
 )
 
 const (
-	OnTime    tripStatus = "On time"
-	Delayed              = "Delayed"
-	Cancelled            = "Cancelled"
+	OnTime    tripStatus = 0
+	Delayed              = 1
+	Cancelled            = 2
 )
 
-func newTrip(from, to id, train Train) Trip {
-	// NOTE: not sure if this function would be better taking a station or just the id
-	return Trip{
-		Id:            uuid.New(),
-		FromStationId: from,
-		ToStationId:   to,
-		TrainId:       train.E.Id,
+func (ts tripStatus) String() string {
+	switch ts {
+	case OnTime:
+		return "On Time"
+	case Cancelled:
+		return "Cancelled"
+	case Delayed:
+		return "Delayed"
+	default:
+		panic(fmt.Sprintf("unexpected main.tripStatus: %#v", ts))
 	}
 }
 
-func newTripCoordinatorLocal(trains storeReader[Train], stations storeReader[Station]) *tripCoordinatorLocal {
-	return &tripCoordinatorLocal{
+func newTrip(from, to Station, train Train, expTimes expectedTimes, status tripStatus) Trip {
+	return Trip{
+		uuid.New(),
+		from.E.Id,
+		to.E.Id,
+		train.E.Id,
+		expTimes,
+		status,
+	}
+}
+
+func newTripCoordinatorLocal(trains storeReader[Train], stations storeReader[Station]) *tripHandlerLocal {
+	return &tripHandlerLocal{
 		trips:    map[id]Trip{},
 		trains:   trains,
 		stations: stations,
 	}
 }
 
-func (tcl *tripCoordinatorLocal) all() (map[id]Trip, error) {
-	return tcl.trips, nil
+func (tcl tripStoreLocal) all() (map[id]Trip, *storeReaderError) {
+	return tcl, nil
 }
 
-func (tcl *tripCoordinatorLocal) getById(id id) (Trip, error) {
-	t, found := tcl.trips[id]
+func (tsl tripStoreLocal) getById(id id) (Trip, *storeReaderError) {
+	t, found := tsl[id]
 
 	if !found {
 		return Trip{}, newStoreReaderError(id, "Trip", StoreReaderErrIdNotFound)
@@ -69,7 +77,7 @@ func (tcl *tripCoordinatorLocal) getById(id id) (Trip, error) {
 	return t, nil
 }
 
-func (tcl *tripCoordinatorLocal) delayTrip(id id) error {
+func (tcl *tripHandlerLocal) delayTrip(id id) error {
 	t, found := tcl.trips[id]
 
 	if !found {
@@ -83,7 +91,7 @@ func (tcl *tripCoordinatorLocal) delayTrip(id id) error {
 	return nil
 }
 
-func (tcl *tripCoordinatorLocal) scheduleTrip(t Trip) error {
+func (tcl *tripHandlerLocal) scheduleTrip(t Trip) error {
 	// _, found := tcl.trips[t.Id]
 	//
 	// if found {
@@ -112,6 +120,6 @@ func (tcl *tripCoordinatorLocal) scheduleTrip(t Trip) error {
 	return nil
 }
 
-func (tcl *tripCoordinatorLocal) cancelTrip(tripId id) error {
+func (tcl *tripHandlerLocal) cancelTrip(tripId id) error {
 	return nil
 }

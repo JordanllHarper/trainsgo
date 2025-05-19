@@ -71,6 +71,23 @@ func (h lineHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	serveJson(w, method, code, body)
 }
 
+func (h tripHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	method := req.Method
+
+	var code int
+	var body int
+	switch method {
+	case "GET":
+		handleGet(req, h.trips)
+	case "POST":
+		h.handlePost(req)
+	case "PUT":
+		h.handlePut(req)
+	}
+
+	serveJson(w, method, code, body)
+}
+
 func (h trainHandlerLocal) handlePut(req *http.Request) (int, any) {
 	var t renameBody
 
@@ -95,18 +112,6 @@ func (h trainHandlerLocal) handlePut(req *http.Request) (int, any) {
 }
 
 func (h lineHandlerLocal) handlePost(req *http.Request) (int, any) {
-	getStationById := func(id string) (Station, any) {
-		stId, err := uuid.Parse(id)
-		if err != nil {
-			return Station{}, errBadId(id)
-		}
-
-		station, stErr := h.stations.getById(stId)
-		if stErr != nil {
-			return Station{}, errIdDoesntExist(stId)
-		}
-		return station, nil
-	}
 
 	var t linePostBody
 
@@ -114,12 +119,12 @@ func (h lineHandlerLocal) handlePost(req *http.Request) (int, any) {
 		return http.StatusBadRequest, errMalformedBody()
 	}
 
-	st1, err := getStationById(t.StationOne)
+	st1, err := getVByStringId(h.stations, t.StationOne)
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
 
-	st2, err := getStationById(t.StationTwo)
+	st2, err := getVByStringId(h.stations, t.StationTwo)
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
@@ -192,6 +197,7 @@ func (s stationStoreLocal) handlePost(req *http.Request) (int, any) {
 	}
 	return http.StatusCreated, st
 }
+
 func (s stationStoreLocal) handlePut(req *http.Request) (int, any) {
 	var t renameBody
 
@@ -211,4 +217,53 @@ func (s stationStoreLocal) handlePut(req *http.Request) (int, any) {
 	value.Name = t.Name
 	s.stations[id] = value
 	return http.StatusOK, nil
+}
+
+func (h tripHandlerLocal) handlePost(req *http.Request) (int, any) {
+
+	var t tripPostBody
+
+	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
+		return http.StatusBadRequest, errMalformedBody()
+	}
+
+	fromStation, err := getVByStringId(h.stations, t.FromStationId)
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	toStation, err := getVByStringId(h.stations, t.ToStationId)
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	train, err := getVByStringId(h.trains, t.TrainId)
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	trip := newTrip(fromStation, toStation, train, t.ExpTimes, t.StartingStatus)
+
+	h.trips[trip.Id] = trip
+	// We've added trip to the store, now we need to plot a route from the starting station to the ending station
+	return http.StatusCreated, trip
+}
+
+func (h tripHandlerLocal) handlePut(req *http.Request) (int, any) {
+	var t tripPutBody
+
+	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
+		return http.StatusBadRequest, errMalformedBody()
+	}
+
+	trip, err := getVByStringId(h.trips, t.Id)
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	trip.Status = t.NewStatus
+	h.trips[trip.Id] = trip
+
+	return http.StatusOK, trip
+
 }

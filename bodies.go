@@ -17,8 +17,21 @@ type (
 
 	linePostBody struct {
 		Name       string `json:"name"`
-		StationOne string `json:"one"`
-		StationTwo string `json:"two"`
+		StationOne string `json:"stationOne"`
+		StationTwo string `json:"stationTwo"`
+	}
+
+	tripPostBody struct {
+		FromStationId  string        `json:"fromStationId"`
+		ToStationId    string        `json:"toStationId"`
+		TrainId        string        `json:"trainId"`
+		StartingStatus tripStatus    `json:"startingStatus"`
+		ExpTimes       expectedTimes `json:"expectedTimes"`
+	}
+
+	tripPutBody struct {
+		Id        string     `json:"id"`
+		NewStatus tripStatus `json:"status"`
 	}
 
 	renameBody struct {
