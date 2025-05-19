@@ -5,5 +5,5 @@ import (
 )
 
 type (
-	id = uuid.UUID
+	Id = uuid.UUID
 )

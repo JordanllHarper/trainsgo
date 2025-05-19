@@ -56,14 +56,14 @@ func errBadId(id string) errorBody {
 	return errorBody{Message: fmt.Sprintf("Bad ID format for %s", id)}
 }
 
-func errIdDoesntExist(id id) errorBody {
+func errIdDoesntExist(id Id) errorBody {
 	return errorBody{Message: fmt.Sprintf(
 		"ID %s doesn't exist",
 		id.String(),
 	)}
 }
 
-func errIdExists(id id) errorBody {
+func errIdExists(id Id) errorBody {
 	return errorBody{
 		Message: fmt.Sprintf(
 			"%s ID already exists",

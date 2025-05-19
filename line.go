@@ -9,13 +9,13 @@ import (
 // Describes a connection between 2 nodes
 type (
 	Line struct {
-		Id         id     `json:"id"`
+		Id         Id     `json:"id"`
 		Name       string `json:"name"`
-		StationOne id     `json:"stationOne"`
-		StationTwo id     `json:"stationTwo"`
+		StationOne Id     `json:"stationOne"`
+		StationTwo Id     `json:"stationTwo"`
 	}
 
-	lineStoreLocal map[id]Line
+	lineStoreLocal map[Id]Line
 )
 
 type lineHandlerLocal struct {
@@ -32,14 +32,14 @@ func newLine(one, two Station, name string) Line {
 }
 
 func newLineStoreLocal() lineStoreLocal {
-	return map[id]Line{}
+	return map[Id]Line{}
 }
 
-func (lsl lineStoreLocal) all() (map[id]Line, *storeReaderError) {
+func (lsl lineStoreLocal) all() (map[Id]Line, *storeReaderError) {
 	return maps.Clone(lsl), nil
 }
 
-func (lsl lineStoreLocal) getById(id id) (Line, *storeReaderError) {
+func (lsl lineStoreLocal) getById(id Id) (Line, *storeReaderError) {
 	value, found := lsl[id]
 	if !found {
 		return Line{}, newStoreReaderError(id, "Line", StoreReaderErrIdNotFound)
@@ -58,7 +58,7 @@ func (lsl lineStoreLocal) getByName(name string) ([]Line, *storeReaderError) {
 	return lines, nil
 }
 
-func (lsl lineStoreLocal) changeName(id id, newName string) *storeReaderError {
+func (lsl lineStoreLocal) changeName(id Id, newName string) *storeReaderError {
 	line, found := lsl[id]
 	if !found {
 		return newStoreReaderError(id, "Line", StoreReaderErrIdNotFound)
@@ -75,7 +75,7 @@ const (
 )
 
 type registerLineError struct {
-	id   id
+	id   Id
 	code registerLineErrorCode
 }
 
@@ -89,7 +89,7 @@ func (lsl lineStoreLocal) register(l Line) *registerLineError {
 	return nil
 }
 
-func (lsl lineStoreLocal) delete(id id) *storeDeleterError {
+func (lsl lineStoreLocal) delete(id Id) *storeDeleterError {
 	// TODO: Wait for trains to finish using this line, then decommission
 	return nil
 }

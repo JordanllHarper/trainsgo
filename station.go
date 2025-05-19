@@ -7,29 +7,29 @@ import (
 
 type (
 	Station struct {
-		E                entity `json:"entity"`
+		E                Entity `json:"entity"`
 		Name             string `json:"name"`
 		Platforms        int    `json:"platforms"`
 		SurroundingLines []Line `json:"surroundingLines"`
 	}
 
 	errStationAlreadyAtPosition struct {
-		id
-		position
+		Id
+		Position
 	}
 
 	stationStoreLocal struct {
-		stations map[id]Station
+		stations map[Id]Station
 	}
 )
 
 func newStationStoreLocal() *stationStoreLocal {
-	return &stationStoreLocal{stations: map[id]Station{}}
+	return &stationStoreLocal{stations: map[Id]Station{}}
 }
 
-func newStation(pos position, name string, platforms int) Station {
+func newStation(pos Position, name string, platforms int) Station {
 	return Station{
-		E:         newEntity(pos),
+		E:         NewEntity(pos),
 		Name:      name,
 		Platforms: platforms,
 	}
@@ -44,7 +44,7 @@ func (s Station) String() string {
 	)
 }
 
-func (ssl stationStoreLocal) getById(id id) (Station, *storeReaderError) {
+func (ssl stationStoreLocal) getById(id Id) (Station, *storeReaderError) {
 	item, found := ssl.stations[id]
 	if !found {
 		return Station{},
@@ -54,7 +54,7 @@ func (ssl stationStoreLocal) getById(id id) (Station, *storeReaderError) {
 	return item, nil
 }
 
-func (ssl stationStoreLocal) all() (map[id]Station, *storeReaderError) {
+func (ssl stationStoreLocal) all() (map[Id]Station, *storeReaderError) {
 	return maps.Clone(ssl.stations), nil
 }
 
@@ -72,8 +72,8 @@ func (ssl *stationStoreLocal) getByName(name string) ([]Station, *storeReaderErr
 func (err errStationAlreadyAtPosition) Error() string {
 	return fmt.Sprintf(
 		"There is already Station %v at position %s",
-		err.id,
-		err.position,
+		err.Id,
+		err.Position,
 	)
 }
 
@@ -85,7 +85,7 @@ const (
 )
 
 type registerStationError struct {
-	id   id
+	id   Id
 	code registerStationErrorCode
 }
 
@@ -107,12 +107,12 @@ func (ssl *stationStoreLocal) register(s Station) *registerStationError {
 	return nil
 }
 
-func (ssl stationStoreLocal) delete(id id) *storeDeleterError {
+func (ssl stationStoreLocal) delete(id Id) *storeDeleterError {
 	// TODO: Cancel all schedules going to this station
 	return nil
 }
 
-func (ssl *stationStoreLocal) changeName(id id, newName string) *storeReaderError {
+func (ssl *stationStoreLocal) changeName(id Id, newName string) *storeReaderError {
 	station, found := ssl.stations[id]
 	if !found {
 		return newStoreReaderError(id, "Station", StoreReaderErrIdNotFound)

@@ -171,7 +171,7 @@ func (s stationStoreLocal) handlePost(req *http.Request) (int, any) {
 
 	st :=
 		newStation(
-			newPosition(
+			NewPosition(
 				v.X,
 				v.Y,
 			),

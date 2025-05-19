@@ -14,12 +14,12 @@ const (
 
 type (
 	storeReader[T any] interface {
-		all() (map[id]T, *storeReaderError)
-		getById(id id) (T, *storeReaderError)
+		all() (map[Id]T, *storeReaderError)
+		getById(id Id) (T, *storeReaderError)
 	}
 
 	storeDeleter interface {
-		delete(id id) *storeDeleterError
+		delete(id Id) *storeDeleterError
 	}
 
 	storeReaderDeleter[T any] interface {
@@ -30,21 +30,21 @@ type (
 	storeReaderErrorCode int
 
 	storeReaderError struct {
-		id     id
+		id     Id
 		entity string
 		code   storeReaderErrorCode
 	}
 
 	storeDeleterErrorCode int
 	storeDeleterError     struct {
-		id     id
+		id     Id
 		entity string
 		code   storeDeleterErrorCode
 	}
 
 	storeRenamerErrorCode int
 	storeRenamerError     struct {
-		id     id
+		id     Id
 		entity string
 		code   storeRenamerErrorCode
 	}
@@ -68,12 +68,12 @@ func (err storeDeleterError) Error() string {
 	}
 }
 
-func newStoreReaderError(id id, entity string, code storeReaderErrorCode) *storeReaderError {
+func newStoreReaderError(id Id, entity string, code storeReaderErrorCode) *storeReaderError {
 	err := storeReaderError{id, entity, code}
 	return &err
 }
 
-func newStoreDeleterError(id id, entity string, code storeDeleterErrorCode) *storeDeleterError {
+func newStoreDeleterError(id Id, entity string, code storeDeleterErrorCode) *storeDeleterError {
 	err := storeDeleterError{id, entity, code}
 	return &err
 }

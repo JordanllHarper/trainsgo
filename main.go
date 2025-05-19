@@ -18,8 +18,8 @@ func createDummyConfiguration() HandlerConfiguration {
 	stationStore := newStationStoreLocal()
 	lineStore := newLineStoreLocal()
 
-	st1 := newStation(newPosition(0, 0), "Station 1", 3)
-	st2 := newStation(newPosition(10, 10), "Station 2", 5)
+	st1 := newStation(NewPosition(0, 0), "Station 1", 3)
+	st2 := newStation(NewPosition(10, 10), "Station 2", 5)
 	t1 := newTrain("Train 1", st1)
 
 	trainStore.register(t1)

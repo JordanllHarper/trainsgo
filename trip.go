@@ -9,10 +9,10 @@ import (
 type (
 	tripStatus int
 	Trip       struct {
-		Id            id            `json:"id"`
-		FromStationId id            `json:"fromStationId"`
-		ToStationId   id            `json:"toStationId"`
-		TrainId       id            `json:"trainId"`
+		Id            Id            `json:"id"`
+		FromStationId Id            `json:"fromStationId"`
+		ToStationId   Id            `json:"toStationId"`
+		TrainId       Id            `json:"trainId"`
 		ExpectedTimes expectedTimes `json:"expectedTimes"`
 		Status        tripStatus    `json:"status"`
 	}
@@ -22,7 +22,7 @@ type (
 		trains   storeReader[Train]
 		stations storeReader[Station]
 	}
-	tripStoreLocal map[id]Trip
+	tripStoreLocal map[Id]Trip
 )
 
 const (
@@ -57,17 +57,17 @@ func newTrip(from, to Station, train Train, expTimes expectedTimes, status tripS
 
 func newTripCoordinatorLocal(trains storeReader[Train], stations storeReader[Station]) *tripHandlerLocal {
 	return &tripHandlerLocal{
-		trips:    map[id]Trip{},
+		trips:    map[Id]Trip{},
 		trains:   trains,
 		stations: stations,
 	}
 }
 
-func (tcl tripStoreLocal) all() (map[id]Trip, *storeReaderError) {
+func (tcl tripStoreLocal) all() (map[Id]Trip, *storeReaderError) {
 	return tcl, nil
 }
 
-func (tsl tripStoreLocal) getById(id id) (Trip, *storeReaderError) {
+func (tsl tripStoreLocal) getById(id Id) (Trip, *storeReaderError) {
 	t, found := tsl[id]
 
 	if !found {
@@ -77,7 +77,7 @@ func (tsl tripStoreLocal) getById(id id) (Trip, *storeReaderError) {
 	return t, nil
 }
 
-func (tcl *tripHandlerLocal) delayTrip(id id) error {
+func (tcl *tripHandlerLocal) delayTrip(id Id) error {
 	t, found := tcl.trips[id]
 
 	if !found {
@@ -120,6 +120,6 @@ func (tcl *tripHandlerLocal) scheduleTrip(t Trip) error {
 	return nil
 }
 
-func (tcl *tripHandlerLocal) cancelTrip(tripId id) error {
+func (tcl *tripHandlerLocal) cancelTrip(tripId Id) error {
 	return nil
 }

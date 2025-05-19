@@ -11,11 +11,11 @@ import (
 
 type (
 	Train struct {
-		E    entity `json:"entity"`
+		E    Entity `json:"entity"`
 		Name string `json:"name"`
 	}
 
-	trainStoreLocal map[id]Train
+	trainStoreLocal map[Id]Train
 )
 
 func newTrainStoreLocal() trainStoreLocal {
@@ -27,17 +27,17 @@ func newTrain(
 	s Station,
 ) Train {
 	return Train{
-		E:    newEntity(s.E.Pos),
+		E:    NewEntity(s.E.Pos),
 		Name: name,
 	}
 }
 
-func (tsl trainStoreLocal) all() (map[id]Train, *storeReaderError) {
+func (tsl trainStoreLocal) all() (map[Id]Train, *storeReaderError) {
 	return maps.Clone(tsl), nil
 
 }
 
-func (tsl trainStoreLocal) getById(id id) (Train, *storeReaderError) {
+func (tsl trainStoreLocal) getById(id Id) (Train, *storeReaderError) {
 	t, found := tsl[id]
 	if !found {
 		return Train{},
@@ -63,7 +63,7 @@ const (
 )
 
 type registerTrainError struct {
-	id   id
+	id   Id
 	code registerStationErrorCode
 }
 
@@ -79,7 +79,7 @@ func (tsl trainStoreLocal) register(t Train) *registerTrainError {
 	return nil
 }
 
-func (tsl trainStoreLocal) delete(id id) *storeDeleterError {
+func (tsl trainStoreLocal) delete(id Id) *storeDeleterError {
 	// TODO: Finish this trains schedule and then remove
 	return nil
 }

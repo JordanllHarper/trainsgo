@@ -2,15 +2,15 @@ package main
 
 import "fmt"
 
-type position struct {
+type Position struct {
 	X int `json:"x"`
 	Y int `json:"y"`
 }
 
-func newPosition(x, y int) position {
-	return position{x, y}
+func NewPosition(x, y int) Position {
+	return Position{x, y}
 }
 
-func (p position) String() string {
+func (p Position) String() string {
 	return fmt.Sprintf("x: %d, y: %d", p.X, p.Y)
 }
