@@ -18,11 +18,11 @@ type (
 	trainStoreLocal map[Id]Train
 )
 
-func newTrainStoreLocal() trainStoreLocal {
+func NewTrainStoreLocal() trainStoreLocal {
 	return trainStoreLocal{}
 }
 
-func newTrain(
+func NewTrain(
 	name string,
 	s Station,
 ) Train {
@@ -32,16 +32,16 @@ func newTrain(
 	}
 }
 
-func (tsl trainStoreLocal) all() (map[Id]Train, *storeReaderError) {
+func (tsl trainStoreLocal) All() (map[Id]Train, *StoreReaderError) {
 	return maps.Clone(tsl), nil
 
 }
 
-func (tsl trainStoreLocal) getById(id Id) (Train, *storeReaderError) {
+func (tsl trainStoreLocal) GetById(id Id) (Train, *StoreReaderError) {
 	t, found := tsl[id]
 	if !found {
 		return Train{},
-			newStoreReaderError(id, "Train", StoreReaderErrIdNotFound)
+			NewStoreReaderError(id, "Train", StoreReaderErrIdNotFound)
 	}
 
 	return t, nil
@@ -79,14 +79,14 @@ func (tsl trainStoreLocal) register(t Train) *registerTrainError {
 	return nil
 }
 
-func (tsl trainStoreLocal) delete(id Id) *storeDeleterError {
+func (tsl trainStoreLocal) Delete(id Id) *StoreDeleterError {
 	// TODO: Finish this trains schedule and then remove
 	return nil
 }
 
 type trainHandlerLocal struct {
 	trains   trainStoreLocal
-	stations storeReader[Station]
+	stations StoreReader[Station]
 }
 
 func (h trainHandlerLocal) handlePost(req *http.Request) (int, any) {
@@ -104,9 +104,9 @@ func (h trainHandlerLocal) handlePost(req *http.Request) (int, any) {
 	if err != nil {
 		return http.StatusBadRequest, errorBody{Message: fmt.Sprintf("Bad Station ID: %s", id)}
 	}
-	station, err := h.stations.getById(id)
+	station, err := h.stations.GetById(id)
 
-	t := newTrain(v.Name, station)
+	t := NewTrain(v.Name, station)
 
 	trErr := h.trains.register(t)
 	if trErr != nil {

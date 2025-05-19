@@ -3,54 +3,54 @@ package main
 import "fmt"
 
 const (
-	StoreReaderErrIdNotFound storeReaderErrorCode = iota
+	StoreReaderErrIdNotFound StoreReaderErrorCode = iota
 	StoreReaderErrInternalError
 )
 
 const (
-	StoreDeleterErrIdNotFound storeDeleterErrorCode = iota
+	StoreDeleterErrIdNotFound StoreDeleterErrorCode = iota
 	StoreDeleterErrInternalError
 )
 
 type (
-	storeReader[T any] interface {
-		all() (map[Id]T, *storeReaderError)
-		getById(id Id) (T, *storeReaderError)
+	StoreReader[T any] interface {
+		All() (map[Id]T, *StoreReaderError)
+		GetById(id Id) (T, *StoreReaderError)
 	}
 
-	storeDeleter interface {
-		delete(id Id) *storeDeleterError
+	StoreDeleter interface {
+		Delete(id Id) *StoreDeleterError
 	}
 
-	storeReaderDeleter[T any] interface {
-		storeReader[T]
-		storeDeleter
+	StoreReaderDeleter[T any] interface {
+		StoreReader[T]
+		StoreDeleter
 	}
 
-	storeReaderErrorCode int
+	StoreReaderErrorCode int
 
-	storeReaderError struct {
+	StoreReaderError struct {
 		id     Id
 		entity string
-		code   storeReaderErrorCode
+		code   StoreReaderErrorCode
 	}
 
-	storeDeleterErrorCode int
-	storeDeleterError     struct {
+	StoreDeleterErrorCode int
+	StoreDeleterError     struct {
 		id     Id
 		entity string
-		code   storeDeleterErrorCode
+		code   StoreDeleterErrorCode
 	}
 
-	storeRenamerErrorCode int
-	storeRenamerError     struct {
+	StoreRenamerErrorCode int
+	StoreRenamerError     struct {
 		id     Id
 		entity string
-		code   storeRenamerErrorCode
+		code   StoreRenamerErrorCode
 	}
 )
 
-func (err storeReaderError) Error() string {
+func (err StoreReaderError) Error() string {
 	switch err.code {
 	case StoreReaderErrIdNotFound:
 		return fmt.Sprintf("%s with ID %v doesn't exist", err.entity, err.id)
@@ -59,7 +59,7 @@ func (err storeReaderError) Error() string {
 	}
 }
 
-func (err storeDeleterError) Error() string {
+func (err StoreDeleterError) Error() string {
 	switch err.code {
 	case StoreDeleterErrIdNotFound:
 		return fmt.Sprintf("%s with ID %v doesn't exist", err.entity, err.id)
@@ -68,12 +68,12 @@ func (err storeDeleterError) Error() string {
 	}
 }
 
-func newStoreReaderError(id Id, entity string, code storeReaderErrorCode) *storeReaderError {
-	err := storeReaderError{id, entity, code}
+func NewStoreReaderError(id Id, entity string, code StoreReaderErrorCode) *StoreReaderError {
+	err := StoreReaderError{id, entity, code}
 	return &err
 }
 
-func newStoreDeleterError(id Id, entity string, code storeDeleterErrorCode) *storeDeleterError {
-	err := storeDeleterError{id, entity, code}
+func NewStoreDeleterError(id Id, entity string, code StoreDeleterErrorCode) *StoreDeleterError {
+	err := StoreDeleterError{id, entity, code}
 	return &err
 }

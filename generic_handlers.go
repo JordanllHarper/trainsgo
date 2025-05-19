@@ -11,7 +11,7 @@ import (
 
 func handleGet[V any](
 	req *http.Request,
-	store storeReader[V],
+	store StoreReader[V],
 ) (int, any) {
 	query := req.URL.Query()
 	hasId := query.Has("id")
@@ -21,7 +21,7 @@ func handleGet[V any](
 		if err != nil {
 			return http.StatusInternalServerError, nil
 		}
-		value, storeErr := store.getById(parsedId)
+		value, storeErr := store.GetById(parsedId)
 
 		if storeErr != nil {
 			switch storeErr.code {
@@ -33,7 +33,7 @@ func handleGet[V any](
 		}
 		return http.StatusOK, value
 	} else {
-		all, storeErr := store.all()
+		all, storeErr := store.All()
 		if storeErr != nil {
 			return http.StatusInternalServerError, nil
 		}
@@ -50,7 +50,7 @@ func handleGet[V any](
 	}
 }
 
-func handleDelete(req *http.Request, store storeDeleter) (int, any) {
+func handleDelete(req *http.Request, store StoreDeleter) (int, any) {
 	var t deleteBody
 
 	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
@@ -62,7 +62,7 @@ func handleDelete(req *http.Request, store storeDeleter) (int, any) {
 		return http.StatusBadRequest, nil
 	}
 
-	if delErr := store.delete(id); delErr != nil {
+	if delErr := store.Delete(id); delErr != nil {
 		return http.StatusInternalServerError, nil
 	}
 

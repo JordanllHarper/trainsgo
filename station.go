@@ -23,11 +23,11 @@ type (
 	}
 )
 
-func newStationStoreLocal() *stationStoreLocal {
+func NewStationStoreLocal() *stationStoreLocal {
 	return &stationStoreLocal{stations: map[Id]Station{}}
 }
 
-func newStation(pos Position, name string, platforms int) Station {
+func NewStation(pos Position, name string, platforms int) Station {
 	return Station{
 		E:         NewEntity(pos),
 		Name:      name,
@@ -44,21 +44,21 @@ func (s Station) String() string {
 	)
 }
 
-func (ssl stationStoreLocal) getById(id Id) (Station, *storeReaderError) {
+func (ssl stationStoreLocal) GetById(id Id) (Station, *StoreReaderError) {
 	item, found := ssl.stations[id]
 	if !found {
 		return Station{},
-			newStoreReaderError(id, "Station", StoreReaderErrIdNotFound)
+			NewStoreReaderError(id, "Station", StoreReaderErrIdNotFound)
 	}
 
 	return item, nil
 }
 
-func (ssl stationStoreLocal) all() (map[Id]Station, *storeReaderError) {
+func (ssl stationStoreLocal) All() (map[Id]Station, *StoreReaderError) {
 	return maps.Clone(ssl.stations), nil
 }
 
-func (ssl *stationStoreLocal) getByName(name string) ([]Station, *storeReaderError) {
+func (ssl *stationStoreLocal) getByName(name string) ([]Station, *StoreReaderError) {
 	stations := []Station{}
 	for v := range maps.Values(ssl.stations) {
 		if v.Name == name {
@@ -107,15 +107,15 @@ func (ssl *stationStoreLocal) register(s Station) *registerStationError {
 	return nil
 }
 
-func (ssl stationStoreLocal) delete(id Id) *storeDeleterError {
+func (ssl stationStoreLocal) Delete(id Id) *StoreDeleterError {
 	// TODO: Cancel all schedules going to this station
 	return nil
 }
 
-func (ssl *stationStoreLocal) changeName(id Id, newName string) *storeReaderError {
+func (ssl *stationStoreLocal) changeName(id Id, newName string) *StoreReaderError {
 	station, found := ssl.stations[id]
 	if !found {
-		return newStoreReaderError(id, "Station", StoreReaderErrIdNotFound)
+		return NewStoreReaderError(id, "Station", StoreReaderErrIdNotFound)
 	}
 
 	station.Name = newName

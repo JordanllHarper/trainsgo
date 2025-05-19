@@ -25,13 +25,13 @@ type (
 		FromStationId  string        `json:"fromStationId"`
 		ToStationId    string        `json:"toStationId"`
 		TrainId        string        `json:"trainId"`
-		StartingStatus tripStatus    `json:"startingStatus"`
-		ExpTimes       expectedTimes `json:"expectedTimes"`
+		StartingStatus TripStatus    `json:"startingStatus"`
+		ExpTimes       ExpectedTimes `json:"expectedTimes"`
 	}
 
 	tripPutBody struct {
 		Id        string     `json:"id"`
-		NewStatus tripStatus `json:"status"`
+		NewStatus TripStatus `json:"status"`
 	}
 
 	renameBody struct {

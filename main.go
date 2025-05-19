@@ -7,20 +7,20 @@ import (
 )
 
 type HandlerConfiguration struct {
-	trainHandler   http.Handler
-	stationHandler http.Handler
-	lineHandler    http.Handler
+	trainHandler   http.HandlerFunc
+	stationHandler http.HandlerFunc
+	lineHandler    http.HandlerFunc
 }
 
 func createDummyConfiguration() HandlerConfiguration {
 
-	trainStore := newTrainStoreLocal()
-	stationStore := newStationStoreLocal()
-	lineStore := newLineStoreLocal()
+	trainStore := NewTrainStoreLocal()
+	stationStore := NewStationStoreLocal()
+	lineStore := NewLineStoreLocal()
 
-	st1 := newStation(NewPosition(0, 0), "Station 1", 3)
-	st2 := newStation(NewPosition(10, 10), "Station 2", 5)
-	t1 := newTrain("Train 1", st1)
+	st1 := NewStation(NewPosition(0, 0), "Station 1", 3)
+	st2 := NewStation(NewPosition(10, 10), "Station 2", 5)
+	t1 := NewTrain("Train 1", st1)
 
 	trainStore.register(t1)
 	stationStore.register(st1)
@@ -31,9 +31,9 @@ func createDummyConfiguration() HandlerConfiguration {
 	lineHandlerLocal := lineHandlerLocal{lineStore, stationStore}
 
 	return HandlerConfiguration{
-		trainHandlerLocal,
-		stationStore,
-		lineHandlerLocal,
+		stationHandler: stationStore.ServeHTTP,
+		trainHandler:   trainHandlerLocal.ServeHTTP,
+		lineHandler:    lineHandlerLocal.ServeHTTP,
 	}
 }
 
@@ -41,9 +41,9 @@ func main() {
 	config := createDummyConfiguration()
 	{
 
-		http.Handle("/trains", config.trainHandler)
-		http.Handle("/stations", config.stationHandler)
-		http.Handle("/line", config.lineHandler)
+		http.HandleFunc("/trains", config.trainHandler)
+		http.HandleFunc("/stations", config.stationHandler)
+		http.HandleFunc("/line", config.lineHandler)
 		// http.HandleFunc("/trip", func(w http.ResponseWriter, req *http.Request) {
 		// 	handleTrip(w, req, tripStore)
 		// })

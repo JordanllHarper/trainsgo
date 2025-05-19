@@ -7,31 +7,31 @@ import (
 )
 
 type (
-	tripStatus int
+	TripStatus int
 	Trip       struct {
 		Id            Id            `json:"id"`
 		FromStationId Id            `json:"fromStationId"`
 		ToStationId   Id            `json:"toStationId"`
 		TrainId       Id            `json:"trainId"`
-		ExpectedTimes expectedTimes `json:"expectedTimes"`
-		Status        tripStatus    `json:"status"`
+		ExpectedTimes ExpectedTimes `json:"expectedTimes"`
+		Status        TripStatus    `json:"status"`
 	}
 
 	tripHandlerLocal struct {
 		trips    tripStoreLocal
-		trains   storeReader[Train]
-		stations storeReader[Station]
+		trains   StoreReader[Train]
+		stations StoreReader[Station]
 	}
 	tripStoreLocal map[Id]Trip
 )
 
 const (
-	OnTime    tripStatus = 0
+	OnTime    TripStatus = 0
 	Delayed              = 1
 	Cancelled            = 2
 )
 
-func (ts tripStatus) String() string {
+func (ts TripStatus) String() string {
 	switch ts {
 	case OnTime:
 		return "On Time"
@@ -44,7 +44,7 @@ func (ts tripStatus) String() string {
 	}
 }
 
-func newTrip(from, to Station, train Train, expTimes expectedTimes, status tripStatus) Trip {
+func NewTrip(from, to Station, train Train, expTimes ExpectedTimes, status TripStatus) Trip {
 	return Trip{
 		uuid.New(),
 		from.E.Id,
@@ -55,7 +55,7 @@ func newTrip(from, to Station, train Train, expTimes expectedTimes, status tripS
 	}
 }
 
-func newTripCoordinatorLocal(trains storeReader[Train], stations storeReader[Station]) *tripHandlerLocal {
+func NewTripCoordinatorLocal(trains StoreReader[Train], stations StoreReader[Station]) *tripHandlerLocal {
 	return &tripHandlerLocal{
 		trips:    map[Id]Trip{},
 		trains:   trains,
@@ -63,15 +63,15 @@ func newTripCoordinatorLocal(trains storeReader[Train], stations storeReader[Sta
 	}
 }
 
-func (tcl tripStoreLocal) all() (map[Id]Trip, *storeReaderError) {
+func (tcl tripStoreLocal) All() (map[Id]Trip, *StoreReaderError) {
 	return tcl, nil
 }
 
-func (tsl tripStoreLocal) getById(id Id) (Trip, *storeReaderError) {
+func (tsl tripStoreLocal) GetById(id Id) (Trip, *StoreReaderError) {
 	t, found := tsl[id]
 
 	if !found {
-		return Trip{}, newStoreReaderError(id, "Trip", StoreReaderErrIdNotFound)
+		return Trip{}, NewStoreReaderError(id, "Trip", StoreReaderErrIdNotFound)
 	}
 
 	return t, nil
@@ -81,42 +81,13 @@ func (tcl *tripHandlerLocal) delayTrip(id Id) error {
 	t, found := tcl.trips[id]
 
 	if !found {
-		return newStoreReaderError(id, "Trip", StoreReaderErrIdNotFound)
+		return NewStoreReaderError(id, "Trip", StoreReaderErrIdNotFound)
 	}
 
 	t.Status = Delayed
 
 	tcl.trips[id] = t
 
-	return nil
-}
-
-func (tcl *tripHandlerLocal) scheduleTrip(t Trip) error {
-	// _, found := tcl.trips[t.Id]
-	//
-	// if found {
-	// 	return newStoreReaderError(t.Id, "Trip", StoreReaderErrIdNotFound)
-	// }
-	//
-	// train, err := tcl.trains.getById(t.TrainId)
-	// if err != nil {
-	// 	return err
-	// }
-	//
-	// st1, err := tcl.stations.getById(t.FromStationId)
-	// if err != nil {
-	// 	return err
-	// }
-	//
-	// st2, err := tcl.stations.getById(t.ToStationId)
-	// if err != nil {
-	// 	return err
-	// }
-	//
-	// // Add the trip to the store
-	// tcl.trips[t.Id] = t
-	//
-	// return nil
 	return nil
 }
 

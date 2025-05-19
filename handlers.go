@@ -119,12 +119,12 @@ func (h lineHandlerLocal) handlePost(req *http.Request) (int, any) {
 		return http.StatusBadRequest, errMalformedBody()
 	}
 
-	st1, err := getVByStringId(h.stations, t.StationOne)
+	st1, err := getByStringId(h.stations, t.StationOne)
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
 
-	st2, err := getVByStringId(h.stations, t.StationTwo)
+	st2, err := getByStringId(h.stations, t.StationTwo)
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
@@ -170,7 +170,7 @@ func (s stationStoreLocal) handlePost(req *http.Request) (int, any) {
 	}
 
 	st :=
-		newStation(
+		NewStation(
 			NewPosition(
 				v.X,
 				v.Y,
@@ -227,22 +227,22 @@ func (h tripHandlerLocal) handlePost(req *http.Request) (int, any) {
 		return http.StatusBadRequest, errMalformedBody()
 	}
 
-	fromStation, err := getVByStringId(h.stations, t.FromStationId)
+	fromStation, err := getByStringId(h.stations, t.FromStationId)
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
 
-	toStation, err := getVByStringId(h.stations, t.ToStationId)
+	toStation, err := getByStringId(h.stations, t.ToStationId)
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
 
-	train, err := getVByStringId(h.trains, t.TrainId)
+	train, err := getByStringId(h.trains, t.TrainId)
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
 
-	trip := newTrip(fromStation, toStation, train, t.ExpTimes, t.StartingStatus)
+	trip := NewTrip(fromStation, toStation, train, t.ExpTimes, t.StartingStatus)
 
 	h.trips[trip.Id] = trip
 	// We've added trip to the store, now we need to plot a route from the starting station to the ending station
@@ -256,7 +256,7 @@ func (h tripHandlerLocal) handlePut(req *http.Request) (int, any) {
 		return http.StatusBadRequest, errMalformedBody()
 	}
 
-	trip, err := getVByStringId(h.trips, t.Id)
+	trip, err := getByStringId(h.trips, t.Id)
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
