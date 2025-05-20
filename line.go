@@ -35,19 +35,19 @@ func NewLineStoreLocal() lineStoreLocal {
 	return map[Id]Line{}
 }
 
-func (lsl lineStoreLocal) All() (map[Id]Line, *StoreReaderError) {
+func (lsl lineStoreLocal) All() (map[Id]Line, StoreError) {
 	return maps.Clone(lsl), nil
 }
 
-func (lsl lineStoreLocal) GetById(id Id) (Line, *StoreReaderError) {
+func (lsl lineStoreLocal) GetById(id Id) (Line, StoreError) {
 	value, found := lsl[id]
 	if !found {
-		return Line{}, NewStoreReaderError(id, "Line", StoreReaderErrIdNotFound)
+		return Line{}, IdDoesntExist(id)
 	}
 	return value, nil
 }
 
-func (lsl lineStoreLocal) getByName(name string) ([]Line, *StoreReaderError) {
+func (lsl lineStoreLocal) getByName(name string) ([]Line, StoreError) {
 	lines := []Line{}
 	for v := range maps.Values(lsl) {
 		if v.Name == name {
@@ -58,10 +58,10 @@ func (lsl lineStoreLocal) getByName(name string) ([]Line, *StoreReaderError) {
 	return lines, nil
 }
 
-func (lsl lineStoreLocal) changeName(id Id, newName string) *StoreReaderError {
+func (lsl lineStoreLocal) changeName(id Id, newName string) StoreError {
 	line, found := lsl[id]
 	if !found {
-		return NewStoreReaderError(id, "Line", StoreReaderErrIdNotFound)
+		return IdDoesntExist(id)
 	}
 	line.Name = newName
 	lsl[id] = line
@@ -89,7 +89,7 @@ func (lsl lineStoreLocal) register(l Line) *registerLineError {
 	return nil
 }
 
-func (lsl lineStoreLocal) Delete(id Id) *StoreDeleterError {
+func (lsl lineStoreLocal) Delete(id Id) StoreError {
 	// TODO: Wait for trains to finish using this line, then decommission
 	return nil
 }

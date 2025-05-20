@@ -2,27 +2,29 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+)
+
+const (
+	RouterErrIdDoesntExist     RouterErrorCode = 0
+	RouterErrInvalidConnection RouterErrorCode = 1
+	RouterErrInternalError     RouterErrorCode = 2
 )
 
 type (
 	/*
-		Given a currentId for the current location and a destinationId, what is the next set of lines the user needs to take.
+		Given a currentId for the current location and a destinationId, what is the next line the user needs to take.
 	*/
 	Router interface {
-		Route(currentId Id, destId Id) ([]Line, *RouterError)
+		Route(currentId Id, destId Id) (Route, RouterError)
 	}
 
 	routerImpl struct {
 		stations StoreReader[Station]
+		routes   StoreReader[Route]
 	}
 
-	RouterErrorCode int
-	RouterError     struct {
-		Id   Id
-		Code RouterErrorCode
-	}
-
-	RouterChans struct {
+	routerChans struct {
 		addCh     chan chan idSet
 		visitedCh chan idSet
 		errCh     chan RouterError
@@ -30,35 +32,27 @@ type (
 	}
 
 	idSet map[Id]bool
-)
 
-func NewRouterChans(
-	addChan chan chan idSet,
-	visitedChan chan idSet,
-	errChan chan RouterError,
-	endChan chan []Line,
-) RouterChans {
-	return RouterChans{addChan, visitedChan, errChan, endChan}
-}
-
-const (
-	RouterErrIdNotFound       RouterErrorCode = 0
-	RouterErrIdNotAConnection RouterErrorCode = 1
-	RouterErrInternalError    RouterErrorCode = 2
-)
-
-func (err RouterError) Error() string {
-	switch err.Code {
-	case RouterErrIdNotFound:
-		return fmt.Sprintf("ID not found %s", err.Id)
-	case RouterErrInternalError:
-		return fmt.Sprintf("Internal Server Error")
-	default:
-		panic(fmt.Sprintf("unexpected main.RouterErrorCode: %#v", err.Code))
+	RouterErrorCode int
+	RouterError     interface {
+		HttpError
+		RouterErrorCode() RouterErrorCode
 	}
+	routerIdInvalidConnection Id
+)
+
+func (e idDoesntExist) RouterErrorCode() RouterErrorCode       { return RouterErrIdDoesntExist }
+func (e internalServerError) RouterErrorCode() RouterErrorCode { return RouterErrInternalError }
+func (e routerIdInvalidConnection) Error() string {
+	return fmt.Sprintf("ID %s invalid connecting station", Id(e))
+}
+func (e routerIdInvalidConnection) HttpCode() int { return http.StatusBadRequest }
+func (e routerIdInvalidConnection) RouterErrorCode() RouterErrorCode {
+	return RouterErrInvalidConnection
 }
 
-func (ri routerImpl) Route(currentId Id, destId Id) ([]Line, *RouterError) {
+func (ri routerImpl) Route(currentId Id, destId Id) (Route, RouterError) {
+
 	// The found routes
 	routes := [][]Line{}
 	// The ids that have been visited
@@ -77,7 +71,7 @@ func (ri routerImpl) Route(currentId Id, destId Id) ([]Line, *RouterError) {
 
 	root, err := getStation(ri.stations, currentId)
 	if err != nil {
-		return nil, err
+		return Route{}, err
 	}
 
 	surroundingLines := root.SurroundingLines
@@ -88,7 +82,7 @@ func (ri routerImpl) Route(currentId Id, destId Id) ([]Line, *RouterError) {
 			[]Line{line},
 			line.Id,
 			destId,
-			NewRouterChans(
+			newRouterChans(
 				addCh,
 				routineVisitedCh,
 				errCh,
@@ -117,16 +111,14 @@ func (ri routerImpl) Route(currentId Id, destId Id) ([]Line, *RouterError) {
 
 }
 
-func getStation(stations StoreReader[Station], currentId Id) (Station, *RouterError) {
+func getStation(stations StoreReader[Station], currentId Id) (Station, RouterError) {
 	st, stErr := stations.GetById(currentId)
 	if stErr != nil {
-		switch stErr.code {
-		case StoreReaderErrIdNotFound:
-			return Station{}, &RouterError{Id: currentId, Code: RouterErrIdNotFound}
-		case StoreReaderErrInternalError:
-			return Station{}, &RouterError{Id: currentId, Code: RouterErrInternalError}
-		default:
-			panic(fmt.Sprintf("unexpected main.StoreReaderErrorCode: %#v", stErr.code))
+		switch stErr.StoreErrorCode() {
+		case StoreErrorIdNotFound:
+			return Station{}, idDoesntExist(currentId)
+		case StoreErrorInternalError:
+			return Station{}, internalServerError{stErr}
 		}
 	}
 	return st, nil
@@ -137,7 +129,7 @@ func bfs(
 	route []Line,
 	currentId Id,
 	destId Id,
-	chans RouterChans,
+	chans routerChans,
 ) {
 	// if we have reached our id, we're done
 	if currentId == destId {
@@ -149,7 +141,7 @@ func bfs(
 	if err != nil {
 		// cancel this search
 		// TODO: We could entertain continuing here
-		chans.errCh <- *err
+		chans.errCh <- err
 		return
 	}
 
@@ -173,26 +165,26 @@ func bfs(
 		}()
 		for _, line := range st.SurroundingLines {
 			st1Id, st2Id := line.StationOne, line.StationOne
-			var connectingSt Id
+			var nextSt Id
 			switch currentId {
 			case st1Id:
-				connectingSt = st2Id
+				nextSt = st2Id
 			case st2Id:
-				connectingSt = st1Id
+				nextSt = st1Id
 			default:
-				chans.errCh <- RouterError{Id: connectingSt, Code: RouterErrIdNotAConnection}
+				chans.errCh <- routerIdInvalidConnection(currentId)
 				return
 			}
-			if visited[connectingSt] {
+			if visited[nextSt] {
 				continue
 			}
 			{
-				visited[connectingSt] = true
+				visited[nextSt] = true
 				chans.visitedCh <- visited
 			}
-			st, err := getStation(stations, connectingSt)
+			st, err := getStation(stations, nextSt)
 			if err != nil {
-				chans.errCh <- RouterError{Id: connectingSt, Code: RouterErrIdNotFound}
+				chans.errCh <- idDoesntExist(st.E.Id)
 				return
 			}
 			go bfs(stations, route, st.E.Id, destId, chans)
@@ -200,4 +192,13 @@ func bfs(
 	}( // We get the station connected to this one, which is NOT this one (since we have no guarantees of which station is which)
 	)
 
+}
+
+func newRouterChans(
+	addChan chan chan idSet,
+	visitedChan chan idSet,
+	errChan chan RouterError,
+	endChan chan []Line,
+) routerChans {
+	return routerChans{addChan, visitedChan, errChan, endChan}
 }

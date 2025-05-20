@@ -12,30 +12,25 @@ import (
 func handleGet[V any](
 	req *http.Request,
 	store StoreReader[V],
-) (int, any) {
+) (HttpResponse, HttpError) {
 	query := req.URL.Query()
 	hasId := query.Has("id")
 
 	if hasId {
 		parsedId, err := uuid.Parse(query.Get("id"))
 		if err != nil {
-			return http.StatusInternalServerError, nil
+			return nil, badId(parsedId.String())
 		}
 		value, storeErr := store.GetById(parsedId)
 
 		if storeErr != nil {
-			switch storeErr.code {
-			case StoreReaderErrIdNotFound:
-				return http.StatusNotFound, nil
-			default:
-				return http.StatusInternalServerError, nil
-			}
+			return nil, storeErr
 		}
-		return http.StatusOK, value
+		return statusOK{value}, nil
 	} else {
 		all, storeErr := store.All()
 		if storeErr != nil {
-			return http.StatusInternalServerError, nil
+			return nil, internalServerError{storeErr}
 		}
 
 		storeValues := maps.Values(all)
@@ -46,26 +41,26 @@ func handleGet[V any](
 		}{
 			Values: arr,
 		}
-		return http.StatusOK, response
+		return statusOK{response}, nil
 	}
 }
 
-func handleDelete(req *http.Request, store StoreDeleter) (int, any) {
+func handleDelete(req *http.Request, store StoreDeleter) (HttpResponse, HttpError) {
 	var t deleteBody
 
 	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
-		return http.StatusBadRequest, nil
+		return nil, malformedBody{}
 	}
 
 	id, err := uuid.Parse(t.Id)
 	if err != nil {
-		return http.StatusBadRequest, nil
+		return nil, badId(t.Id)
 	}
 
 	if delErr := store.Delete(id); delErr != nil {
-		return http.StatusInternalServerError, nil
+		return nil, internalServerError{delErr}
 	}
 
-	return http.StatusOK, nil
+	return statusOK{nil}, nil
 
 }

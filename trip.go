@@ -21,6 +21,7 @@ type (
 		trips    tripStoreLocal
 		trains   StoreReader[Train]
 		stations StoreReader[Station]
+		router   Router
 	}
 	tripStoreLocal map[Id]Trip
 )
@@ -63,15 +64,15 @@ func NewTripCoordinatorLocal(trains StoreReader[Train], stations StoreReader[Sta
 	}
 }
 
-func (tcl tripStoreLocal) All() (map[Id]Trip, *StoreReaderError) {
+func (tcl tripStoreLocal) All() (map[Id]Trip, StoreError) {
 	return tcl, nil
 }
 
-func (tsl tripStoreLocal) GetById(id Id) (Trip, *StoreReaderError) {
+func (tsl tripStoreLocal) GetById(id Id) (Trip, StoreError) {
 	t, found := tsl[id]
 
 	if !found {
-		return Trip{}, NewStoreReaderError(id, "Trip", StoreReaderErrIdNotFound)
+		return Trip{}, IdDoesntExist(id)
 	}
 
 	return t, nil
@@ -81,7 +82,7 @@ func (tcl *tripHandlerLocal) delayTrip(id Id) error {
 	t, found := tcl.trips[id]
 
 	if !found {
-		return NewStoreReaderError(id, "Trip", StoreReaderErrIdNotFound)
+		return idDoesntExist(id)
 	}
 
 	t.Status = Delayed

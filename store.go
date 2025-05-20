@@ -1,25 +1,26 @@
 package main
 
-import "fmt"
+import "net/http"
 
 const (
-	StoreReaderErrIdNotFound StoreReaderErrorCode = iota
-	StoreReaderErrInternalError
+	StoreErrorIdNotFound    StoreErrorCode = 0
+	StoreErrorInternalError StoreErrorCode = 1
 )
 
-const (
-	StoreDeleterErrIdNotFound StoreDeleterErrorCode = iota
-	StoreDeleterErrInternalError
-)
+type StoreErrorCode int
+type StoreError interface {
+	StoreErrorCode() StoreErrorCode
+	HttpError
+}
 
 type (
 	StoreReader[T any] interface {
-		All() (map[Id]T, *StoreReaderError)
-		GetById(id Id) (T, *StoreReaderError)
+		All() (map[Id]T, StoreError)
+		GetById(id Id) (T, StoreError)
 	}
 
 	StoreDeleter interface {
-		Delete(id Id) *StoreDeleterError
+		Delete(id Id) StoreError
 	}
 
 	StoreReaderDeleter[T any] interface {
@@ -27,53 +28,14 @@ type (
 		StoreDeleter
 	}
 
-	StoreReaderErrorCode int
-
-	StoreReaderError struct {
-		id     Id
-		entity string
-		code   StoreReaderErrorCode
-	}
-
-	StoreDeleterErrorCode int
-	StoreDeleterError     struct {
-		id     Id
-		entity string
-		code   StoreDeleterErrorCode
-	}
-
-	StoreRenamerErrorCode int
-	StoreRenamerError     struct {
-		id     Id
-		entity string
-		code   StoreRenamerErrorCode
-	}
+	IdDoesntExist Id
+	InternalError struct{ error }
 )
 
-func (err StoreReaderError) Error() string {
-	switch err.code {
-	case StoreReaderErrIdNotFound:
-		return fmt.Sprintf("%s with ID %v doesn't exist", err.entity, err.id)
-	default:
-		return fmt.Sprintf("Unrecognised error id %d", err.code)
-	}
-}
+func (e IdDoesntExist) StoreErrorCode() StoreErrorCode { return StoreErrorIdNotFound }
+func (e IdDoesntExist) HttpCode() int                  { return http.StatusBadRequest }
+func (e IdDoesntExist) Error() string                  { return msgIdDoesntExist(Id(e)) }
 
-func (err StoreDeleterError) Error() string {
-	switch err.code {
-	case StoreDeleterErrIdNotFound:
-		return fmt.Sprintf("%s with ID %v doesn't exist", err.entity, err.id)
-	default:
-		return fmt.Sprintf("Unrecognised error id %d", err.code)
-	}
-}
-
-func NewStoreReaderError(id Id, entity string, code StoreReaderErrorCode) *StoreReaderError {
-	err := StoreReaderError{id, entity, code}
-	return &err
-}
-
-func NewStoreDeleterError(id Id, entity string, code StoreDeleterErrorCode) *StoreDeleterError {
-	err := StoreDeleterError{id, entity, code}
-	return &err
-}
+func (e InternalError) HttpCode() int                  { return http.StatusInternalServerError }
+func (e InternalError) StoreErrorCode() StoreErrorCode { return StoreErrorIdNotFound }
+func (e InternalError) Error() string                  { return e.error.Error() }

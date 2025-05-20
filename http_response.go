@@ -1,8 +1,16 @@
 package main
 
-import "fmt"
+import "net/http"
 
 type (
+	HttpResponse interface {
+		HttpCode() int
+		Body() any
+	}
+
+	statusOK      struct{ body any }
+	statusCreated struct{ body any }
+
 	trainPostBody struct {
 		Name      string `json:"name"`
 		StationId string `json:"stationId"`
@@ -42,32 +50,10 @@ type (
 	deleteBody struct {
 		Id string `json:"id"`
 	}
-
-	errorBody struct {
-		Message string `json:"message"`
-	}
 )
 
-func errMalformedBody() errorBody {
-	return errorBody{Message: "Malformed body"}
-}
+func (s statusOK) HttpCode() int { return http.StatusOK }
+func (s statusOK) Body() any     { return nil }
 
-func errBadId(id string) errorBody {
-	return errorBody{Message: fmt.Sprintf("Bad ID format for %s", id)}
-}
-
-func errIdDoesntExist(id Id) errorBody {
-	return errorBody{Message: fmt.Sprintf(
-		"ID %s doesn't exist",
-		id.String(),
-	)}
-}
-
-func errIdExists(id Id) errorBody {
-	return errorBody{
-		Message: fmt.Sprintf(
-			"%s ID already exists",
-			id.String(),
-		),
-	}
-}
+func (s statusCreated) HttpCode() int { return http.StatusCreated }
+func (s statusCreated) Body() any     { return s.body }

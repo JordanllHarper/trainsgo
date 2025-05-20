@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -11,29 +10,29 @@ import (
 func (s stationStoreLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	method := req.Method
 
-	var code int
-	var body any
+	var response HttpResponse
+	var err HttpError
 	switch method {
 	case "GET":
-		code, body = handleGet(req, s)
+		response, err = handleGet(req, s)
 	case "DELETE":
-		code, body = handleDelete(req, s)
+		response, err = handleDelete(req, s)
 	case "PUT":
-		code, body = s.handlePut(req)
+		response, err = s.handlePut(req)
 	case "POST":
-		code, body = s.handlePost(req)
+		response, err = s.handlePost(req)
 	default:
-		code, body = http.StatusMethodNotAllowed, nil
+		response, err = nil, methodNotAllowed(method)
 	}
 
-	serveJson(w, method, code, body)
+	serveJson(w, method, response, err)
 }
 
 func (h trainHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	method := req.Method
 
-	var code int
-	var body any
+	var code HttpResponse
+	var body HttpError
 	switch method {
 	case "GET":
 		code, body = handleGet(req, h.trains)
@@ -44,7 +43,7 @@ func (h trainHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case "POST":
 		code, body = h.handlePost(req)
 	default:
-		code, body = http.StatusMethodNotAllowed, nil
+		code, body = nil, methodNotAllowed(method)
 	}
 
 	serveJson(w, method, code, body)
@@ -53,8 +52,8 @@ func (h trainHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (h lineHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	method := req.Method
 
-	var code int
-	var body any
+	var code HttpResponse
+	var body HttpError
 	switch method {
 	case "GET":
 		code, body = handleGet(req, h.lines)
@@ -65,7 +64,7 @@ func (h lineHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	case "POST":
 		code, body = h.handlePost(req)
 	default:
-		code, body = http.StatusMethodNotAllowed, nil
+		code, body = nil, methodNotAllowed(method)
 	}
 
 	serveJson(w, method, code, body)
@@ -74,99 +73,99 @@ func (h lineHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (h tripHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	method := req.Method
 
-	var code int
-	var body int
+	var code HttpResponse
+	var body HttpError
 	switch method {
 	case "GET":
-		handleGet(req, h.trips)
+		code, body = handleGet(req, h.trips)
 	case "POST":
-		h.handlePost(req)
+		code, body = h.handlePost(req)
 	case "PUT":
-		h.handlePut(req)
+		code, body = h.handlePut(req)
 	}
 
 	serveJson(w, method, code, body)
 }
 
-func (h trainHandlerLocal) handlePut(req *http.Request) (int, any) {
+func (h trainHandlerLocal) handlePut(req *http.Request) (HttpResponse, HttpError) {
 	var t renameBody
 
 	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
-		return http.StatusBadRequest, errMalformedBody()
+		return nil, malformedBody{}
 	}
 
 	id, err := uuid.Parse(t.Id)
 	if err != nil {
-		return http.StatusBadRequest, errBadId(t.Id)
+		return nil, badId(t.Id)
 	}
 
 	train, found := h.trains[id]
 	if !found {
-		return http.StatusBadRequest, errIdDoesntExist(id)
+		return nil, idDoesntExist(id)
 	}
 
 	train.Name = t.Name
 	h.trains[id] = train
 
-	return http.StatusOK, train
+	return statusOK{body: train}, nil
 }
 
-func (h lineHandlerLocal) handlePost(req *http.Request) (int, any) {
+func (h lineHandlerLocal) handlePost(req *http.Request) (HttpResponse, HttpError) {
 
 	var t linePostBody
 
 	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
-		return http.StatusBadRequest, errMalformedBody()
+		return nil, malformedBody{}
 	}
 
 	st1, err := getByStringId(h.stations, t.StationOne)
 	if err != nil {
-		return http.StatusBadRequest, err
+		return nil, err
 	}
 
 	st2, err := getByStringId(h.stations, t.StationTwo)
 	if err != nil {
-		return http.StatusBadRequest, err
+		return nil, err
 	}
 
 	line := newLine(st1, st2, t.Name)
 
 	h.lines[line.Id] = line
 
-	return http.StatusOK, line
+	return statusOK{line}, nil
 }
 
-func (h lineHandlerLocal) handlePut(req *http.Request) (int, any) {
+func (h lineHandlerLocal) handlePut(req *http.Request) (HttpResponse, HttpError) {
 	var t renameBody
 
 	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
-		return http.StatusBadRequest, errMalformedBody()
+		return nil, malformedBody{}
 	}
 
 	id, err := uuid.Parse(t.Id)
 
 	if err != nil {
-		return http.StatusBadRequest, errBadId(t.Id)
+		return nil, badId(t.Id)
 	}
 
 	line, found := h.lines[id]
 	if !found {
-		return http.StatusBadRequest, errIdDoesntExist(id)
+		return nil, idDoesntExist(id)
 	}
 
 	line.Name = t.Name
 
 	h.lines[id] = line
 
-	return http.StatusOK, line
+	return statusOK{line}, nil
 }
 
-func (s stationStoreLocal) handlePost(req *http.Request) (int, any) {
+func (s stationStoreLocal) handlePost(req *http.Request) (HttpResponse, HttpError) {
 	var v stationPostBody
 
 	err := json.NewDecoder(req.Body).Decode(&v)
 	if err != nil {
-		return http.StatusBadRequest, errMalformedBody()
+		return nil, malformedBody{}
 	}
 
 	st :=
@@ -182,88 +181,84 @@ func (s stationStoreLocal) handlePost(req *http.Request) (int, any) {
 	stErr := s.register(st)
 
 	if stErr != nil {
-		var errBody errorBody
-		switch stErr.code {
-		case registerStationErrIdExists:
-			// TODO: We shouldn't put this onto the client, we should just try again...
-			errBody = errIdExists(stErr.id)
-		case registerStationErrPositionTaken:
-			errBody = errorBody{Message: "Station Position already taken"}
-		default:
-			panic(fmt.Sprintf("unexpected main.registerStationErrorCode: %#v", stErr.code))
-		}
+		return nil, stErr
 
-		return http.StatusBadRequest, errBody
 	}
-	return http.StatusCreated, st
+	return statusCreated{st}, nil
 }
 
-func (s stationStoreLocal) handlePut(req *http.Request) (int, any) {
+func (s stationStoreLocal) handlePut(req *http.Request) (HttpResponse, HttpError) {
 	var t renameBody
 
 	err := json.NewDecoder(req.Body).Decode(&t)
 	if err != nil {
-		return http.StatusBadRequest, errMalformedBody()
+		return nil, malformedBody{}
 	}
 	id, err := uuid.Parse(t.Id)
 	if err != nil {
-		return http.StatusBadRequest, errBadId(t.Id)
+		return nil, badId(t.Id)
 	}
 	value, found := s.stations[id]
 	if !found {
-		return http.StatusBadRequest, errIdDoesntExist(id)
+		return nil, idDoesntExist(id)
 	}
 
 	value.Name = t.Name
 	s.stations[id] = value
-	return http.StatusOK, nil
+	return statusOK{}, nil
 }
 
-func (h tripHandlerLocal) handlePost(req *http.Request) (int, any) {
+func (h tripHandlerLocal) handlePost(req *http.Request) (HttpResponse, HttpError) {
 
 	var t tripPostBody
 
 	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
-		return http.StatusBadRequest, errMalformedBody()
+		return nil, malformedBody{}
 	}
 
 	fromStation, err := getByStringId(h.stations, t.FromStationId)
 	if err != nil {
-		return http.StatusBadRequest, err
+		return nil, err
 	}
 
 	toStation, err := getByStringId(h.stations, t.ToStationId)
 	if err != nil {
-		return http.StatusBadRequest, err
+		return nil, err
 	}
 
 	train, err := getByStringId(h.trains, t.TrainId)
 	if err != nil {
-		return http.StatusBadRequest, err
+		return nil, err
 	}
 
 	trip := NewTrip(fromStation, toStation, train, t.ExpTimes, t.StartingStatus)
 
 	h.trips[trip.Id] = trip
+
+	_, rtErr := h.router.Route(fromStation.E.Id, toStation.E.Id)
+
+	if rtErr != nil {
+		return nil, rtErr
+	}
 	// We've added trip to the store, now we need to plot a route from the starting station to the ending station
-	return http.StatusCreated, trip
+	return statusCreated{trip}, nil
 }
 
-func (h tripHandlerLocal) handlePut(req *http.Request) (int, any) {
+func (h tripHandlerLocal) handlePut(req *http.Request) (HttpResponse, HttpError) {
 	var t tripPutBody
 
 	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
-		return http.StatusBadRequest, errMalformedBody()
+		return nil, malformedBody{}
 	}
 
 	trip, err := getByStringId(h.trips, t.Id)
 	if err != nil {
-		return http.StatusBadRequest, err
+		return nil, err
 	}
 
 	trip.Status = t.NewStatus
 	h.trips[trip.Id] = trip
 
-	return http.StatusOK, trip
+	return statusOK{trip}, nil
 
 }

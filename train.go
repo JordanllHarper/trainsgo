@@ -32,16 +32,16 @@ func NewTrain(
 	}
 }
 
-func (tsl trainStoreLocal) All() (map[Id]Train, *StoreReaderError) {
+func (tsl trainStoreLocal) All() (map[Id]Train, StoreError) {
 	return maps.Clone(tsl), nil
 
 }
 
-func (tsl trainStoreLocal) GetById(id Id) (Train, *StoreReaderError) {
+func (tsl trainStoreLocal) GetById(id Id) (Train, StoreError) {
 	t, found := tsl[id]
 	if !found {
 		return Train{},
-			NewStoreReaderError(id, "Train", StoreReaderErrIdNotFound)
+			IdDoesntExist(id)
 	}
 
 	return t, nil
@@ -56,22 +56,30 @@ func (t Train) String() string {
 	)
 }
 
-type registerTrainErrorCode int
+type RegisterTrainErrorCode int
 
 const (
-	registerTrainErrIdExists registerStationErrorCode = iota
+	RegisterTrainErrIdAlreadyExist RegisterTrainErrorCode = 0
 )
 
-type registerTrainError struct {
-	id   Id
-	code registerStationErrorCode
+type RegisterTrainError interface {
+	error
+	RegisterCode() RegisterTrainErrorCode
 }
 
-func (tsl trainStoreLocal) register(t Train) *registerTrainError {
+func (e IdDoesntExist) Id() Id {
+	return Id(e)
+}
+
+func (e IdDoesntExist) RegisterCode() RegisterTrainErrorCode {
+	return RegisterTrainErrIdAlreadyExist
+}
+
+func (tsl trainStoreLocal) register(t Train) RegisterTrainError {
 	_, found := tsl[t.E.Id]
 
 	if found {
-		return &registerTrainError{t.E.Id, registerTrainErrIdExists}
+		return IdDoesntExist(t.E.Id)
 	}
 
 	tsl[t.E.Id] = t
@@ -79,7 +87,7 @@ func (tsl trainStoreLocal) register(t Train) *registerTrainError {
 	return nil
 }
 
-func (tsl trainStoreLocal) Delete(id Id) *StoreDeleterError {
+func (tsl trainStoreLocal) Delete(id Id) StoreError {
 	// TODO: Finish this trains schedule and then remove
 	return nil
 }
@@ -89,7 +97,7 @@ type trainHandlerLocal struct {
 	stations StoreReader[Station]
 }
 
-func (h trainHandlerLocal) handlePost(req *http.Request) (int, any) {
+func (h trainHandlerLocal) handlePost(req *http.Request) (HttpResponse, HttpError) {
 	body := req.Body
 	defer body.Close()
 
@@ -97,12 +105,12 @@ func (h trainHandlerLocal) handlePost(req *http.Request) (int, any) {
 	err := json.NewDecoder(body).Decode(&v)
 
 	if err != nil {
-		return http.StatusBadRequest, errMalformedBody()
+		return nil, malformedBody{}
 	}
 
 	id, err := uuid.Parse(v.StationId)
 	if err != nil {
-		return http.StatusBadRequest, errorBody{Message: fmt.Sprintf("Bad Station ID: %s", id)}
+		return nil, badId(v.StationId)
 	}
 	station, err := h.stations.GetById(id)
 
@@ -110,15 +118,12 @@ func (h trainHandlerLocal) handlePost(req *http.Request) (int, any) {
 
 	trErr := h.trains.register(t)
 	if trErr != nil {
-		var errBody errorBody
-		switch trErr.code {
-		case registerTrainErrIdExists:
-			errIdExists(trErr.id)
-		default:
-			panic(fmt.Sprintf("unexpected main.registerStationErrorCode: %#v", trErr.code))
+		switch trErr.RegisterCode() {
+		case RegisterTrainErrIdAlreadyExist:
+			return nil, idAlreadyExists(t.E.Id)
 		}
-		return http.StatusInternalServerError, errBody
+		return nil, internalServerError{trErr}
 	}
 
-	return http.StatusCreated, nil
+	return statusCreated{t}, nil
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"maps"
+	"net/http"
 )
 
 type (
@@ -44,21 +45,21 @@ func (s Station) String() string {
 	)
 }
 
-func (ssl stationStoreLocal) GetById(id Id) (Station, *StoreReaderError) {
+func (ssl stationStoreLocal) GetById(id Id) (Station, StoreError) {
 	item, found := ssl.stations[id]
 	if !found {
-		return Station{},
-			NewStoreReaderError(id, "Station", StoreReaderErrIdNotFound)
+		return Station{}, IdDoesntExist(id)
+
 	}
 
 	return item, nil
 }
 
-func (ssl stationStoreLocal) All() (map[Id]Station, *StoreReaderError) {
+func (ssl stationStoreLocal) All() (map[Id]Station, StoreError) {
 	return maps.Clone(ssl.stations), nil
 }
 
-func (ssl *stationStoreLocal) getByName(name string) ([]Station, *StoreReaderError) {
+func (ssl *stationStoreLocal) getByName(name string) ([]Station, StoreError) {
 	stations := []Station{}
 	for v := range maps.Values(ssl.stations) {
 		if v.Name == name {
@@ -77,28 +78,39 @@ func (err errStationAlreadyAtPosition) Error() string {
 	)
 }
 
-type registerStationErrorCode int
+type (
+	registerStationErrorCode int
 
-const (
-	registerStationErrIdExists registerStationErrorCode = iota
-	registerStationErrPositionTaken
+	stationPositionTaken Id
 )
 
-type registerStationError struct {
-	id   Id
-	code registerStationErrorCode
+const (
+	registerStationErrIdExists      registerStationErrorCode = 0
+	registerStationErrPositionTaken registerStationErrorCode = 1
+)
+
+func (e idAlreadyExists) RegisterCode() registerStationErrorCode { return registerStationErrIdExists }
+
+func (e stationPositionTaken) HttpCode() int { return http.StatusBadRequest }
+
+func (e stationPositionTaken) RegisterCode() registerStationErrorCode {
+	return registerStationErrPositionTaken
 }
 
-func (ssl *stationStoreLocal) register(s Station) *registerStationError {
+func (e stationPositionTaken) Error() string {
+	return fmt.Sprintf("Station Position already taken by %s", Id(e))
+}
+
+func (ssl *stationStoreLocal) register(s Station) HttpError {
 	_, found := ssl.stations[s.E.Id]
 
 	if found {
-		return &registerStationError{s.E.Id, registerStationErrIdExists}
+		return idAlreadyExists(s.E.Id)
 	}
 
 	for v := range maps.Values(ssl.stations) {
 		if v.E.Pos == s.E.Pos {
-			return &registerStationError{s.E.Id, registerStationErrPositionTaken}
+			return stationPositionTaken(v.E.Id)
 		}
 	}
 
@@ -107,15 +119,15 @@ func (ssl *stationStoreLocal) register(s Station) *registerStationError {
 	return nil
 }
 
-func (ssl stationStoreLocal) Delete(id Id) *StoreDeleterError {
+func (ssl stationStoreLocal) Delete(id Id) StoreError {
 	// TODO: Cancel all schedules going to this station
 	return nil
 }
 
-func (ssl *stationStoreLocal) changeName(id Id, newName string) *StoreReaderError {
+func (ssl *stationStoreLocal) changeName(id Id, newName string) StoreError {
 	station, found := ssl.stations[id]
 	if !found {
-		return NewStoreReaderError(id, "Station", StoreReaderErrIdNotFound)
+		return IdDoesntExist(id)
 	}
 
 	station.Name = newName

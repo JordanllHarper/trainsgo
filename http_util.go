@@ -9,16 +9,22 @@ import (
 func serveJson(
 	w http.ResponseWriter,
 	method string,
-	code int,
-	body any,
+	response HttpResponse,
+	err HttpError,
 ) {
+	if err != nil {
+		http.Error(w, err.Error(), err.HttpCode())
+		return
+	}
+
 	log.Printf("Received %s request\n", method)
 
-	w.WriteHeader(code)
-	if body != nil {
-		err := json.NewEncoder(w).Encode(body)
+	w.WriteHeader(response.HttpCode())
+	if response.Body() != nil {
+		err := json.NewEncoder(w).Encode(response.Body())
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 	}
 }
