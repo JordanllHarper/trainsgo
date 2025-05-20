@@ -115,7 +115,7 @@ func getStation(stations StoreReader[Station], currentId Id) (Station, RouterErr
 	st, stErr := stations.GetById(currentId)
 	if stErr != nil {
 		switch stErr.StoreErrorCode() {
-		case StoreErrorIdNotFound:
+		case StoreErrorIdDoesntExist:
 			return Station{}, idDoesntExist(currentId)
 		case StoreErrorInternalError:
 			return Station{}, internalServerError{stErr}
