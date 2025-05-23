@@ -1,58 +1,33 @@
 package main
 
 import (
+	"cmp"
 	"fmt"
 	"net/http"
-)
-
-const (
-	RouterErrIdDoesntExist     RouterErrorCode = 0
-	RouterErrInvalidConnection RouterErrorCode = 1
-	RouterErrInternalError     RouterErrorCode = 2
+	"slices"
 )
 
 type (
 	/*
 		Given a currentId for the current location and a destinationId, what is the next line the user needs to take.
 	*/
-	Router interface {
-		Route(currentId Id, destId Id) (Route, RouterError)
-	}
-
-	routerImpl struct {
-		stations StoreReader[Station]
-		routes   StoreReader[Route]
-	}
 
 	routerChans struct {
 		addCh     chan chan idSet
 		visitedCh chan idSet
-		errCh     chan RouterError
+		errCh     chan error
 		endCh     chan []Line
 	}
 
 	idSet map[Id]bool
 
-	RouterErrorCode int
-	RouterError     interface {
-		HttpError
-		RouterErrorCode() RouterErrorCode
+	noRouteFound struct {
+		curr, dest Id
 	}
 	routerIdInvalidConnection Id
 )
 
-func (e idDoesntExist) RouterErrorCode() RouterErrorCode       { return RouterErrIdDoesntExist }
-func (e internalServerError) RouterErrorCode() RouterErrorCode { return RouterErrInternalError }
-func (e routerIdInvalidConnection) Error() string {
-	return fmt.Sprintf("ID %s invalid connecting station", Id(e))
-}
-func (e routerIdInvalidConnection) HttpCode() int { return http.StatusBadRequest }
-func (e routerIdInvalidConnection) RouterErrorCode() RouterErrorCode {
-	return RouterErrInvalidConnection
-}
-
-func (ri routerImpl) Route(currentId Id, destId Id) (Route, RouterError) {
-
+func (ri routeStoreLocal) MapRoute(currentId Id, destId Id) (Route, error) {
 	// The found routes
 	routes := [][]Line{}
 	// The ids that have been visited
@@ -63,10 +38,10 @@ func (ri routerImpl) Route(currentId Id, destId Id) (Route, RouterError) {
 	// For when a route has been found to the destId
 	endCh := make(chan []Line)
 	// When a channel reports an error
-	errCh := make(chan RouterError)
+	errCh := make(chan error)
 	// channel for subscribing a new routine to updates
 	addCh := make(chan chan idSet)
-	// all the channels that should receive updates from about the visited nodes
+	// all the channels that should receive updates about the visited nodes
 	routineChs := []chan idSet{}
 
 	root, err := getStation(ri.stations, currentId)
@@ -89,10 +64,13 @@ func (ri routerImpl) Route(currentId Id, destId Id) (Route, RouterError) {
 				endCh,
 			),
 		)
+		routineChs = append(routineChs, routineVisitedCh)
 	}
 
 	// update the channels as we get requests
-	for {
+	numRoutines := len(routineChs)
+	check := true
+	for check {
 		select {
 		case err := <-errCh:
 			// TODO: We could have some resilience here and continue to search, just cancel the routine that ended
@@ -106,20 +84,57 @@ func (ri routerImpl) Route(currentId Id, destId Id) (Route, RouterError) {
 			routes = append(routes, r)
 		case ch := <-addCh:
 			routineChs = append(routineChs, ch)
+			numRoutines++
+		default:
+			if numRoutines == 0 {
+				// We have finished
+				check = false
+			}
 		}
 	}
+	if len(routes) == 0 {
+		return Route{}, noRouteFound{currentId, destId}
+	}
+	minLine := slices.MinFunc(routes, func(left, right []Line) int {
+		return cmp.Compare(len(left), len(right))
+	})
+	if len(minLine) == 0 {
+		return Route{}, noRouteFound{currentId, destId}
+	}
 
+	route := NewRoute(currentId, destId, minLine[0].Id)
+	err = ri.WriteRoute(route)
+	if err != nil {
+		return Route{}, err
+	}
+	ids, err := writeRoutes(ri, minLine[1:], currentId, destId)
+	if err != nil {
+		if e := ri.DeleteBatch(ids); e != nil {
+			return Route{}, internalError{e}
+		}
+
+		return Route{}, err
+	}
+	return route, nil
 }
 
-func getStation(stations StoreReader[Station], currentId Id) (Station, RouterError) {
-	st, stErr := stations.GetById(currentId)
-	if stErr != nil {
-		switch stErr.StoreErrorCode() {
-		case StoreErrorIdDoesntExist:
-			return Station{}, idDoesntExist(currentId)
-		case StoreErrorInternalError:
-			return Station{}, internalServerError{stErr}
+func writeRoutes(r RouteStore, lines []Line, currentId, destId Id) ([]Id, error) {
+	routeIdsWritten := []Id{}
+	for _, l := range lines {
+		route := NewRoute(currentId, destId, l.Id)
+		err := r.WriteRoute(route)
+		if err != nil {
+			return routeIdsWritten, err
 		}
+		routeIdsWritten = append(routeIdsWritten, route.Id)
+	}
+	return routeIdsWritten, nil
+}
+
+func getStation(stations StoreReader[Station], currentId Id) (Station, error) {
+	st, err := stations.GetById(currentId)
+	if err != nil {
+		return Station{}, err
 	}
 	return st, nil
 }
@@ -197,8 +212,18 @@ func bfs(
 func newRouterChans(
 	addChan chan chan idSet,
 	visitedChan chan idSet,
-	errChan chan RouterError,
+	errChan chan error,
 	endChan chan []Line,
 ) routerChans {
 	return routerChans{addChan, visitedChan, errChan, endChan}
 }
+
+func (e routerIdInvalidConnection) Error() string {
+	return fmt.Sprintf("ID %s invalid connecting station", Id(e))
+}
+func (e routerIdInvalidConnection) HttpCode() int { return http.StatusBadRequest }
+
+func (e noRouteFound) Error() string {
+	return fmt.Sprintf("No route found between %v - %v", e.curr, e.dest)
+}
+func (e noRouteFound) HttpCode() int { return http.StatusBadRequest }

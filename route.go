@@ -1,6 +1,9 @@
 package main
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/google/uuid"
 )
 
@@ -11,7 +14,7 @@ type (
 		NextId represents the next station or intersection or whatever to go to to continue the route.
 	*/
 	Route struct {
-		RouteId   Id
+		Id        Id
 		CurrentId Id
 		DestId    Id
 		NextId    Id
@@ -31,35 +34,25 @@ func NewRoute(
 	}
 }
 
-//
-
 type (
 	RouteStore interface {
 		StoreReaderDeleter[Route]
-		GetByCurrDest(current, dest Id) (Route, StoreError)
+		GetByCurrDest(current, dest Id) (Route, error)
+		WriteRoute(r Route) error
+		WriteBatch(r []Route) error
+		MapRoute(currentId Id, destId Id) (Route, error)
 	}
 
 	routeStoreLocal struct {
-		routes map[Id]Route
-		router Router
+		routes   map[Id]Route
+		stations StoreReader[Station]
 	}
-
-	RouteStoreErrorCode int
 )
 
-func (e IdDoesntExist) RouterErrorCode() RouterErrorCode {
-	return RouterErrIdDoesntExist
-}
-
-func (rsl routeStoreLocal) GetByCurrDest(curr Id, dest Id) (Route, RouterError) {
+func (rsl routeStoreLocal) GetByCurrDest(curr Id, dest Id) (Route, error) {
 	routes, stErr := rsl.All()
 	if stErr != nil {
-		switch stErr.StoreErrorCode() {
-		case StoreErrorIdDoesntExist:
-			return Route{}, idDoesntExist()
-		case StoreErrorInternalError:
-			return Route{}, internalServerError{stErr}
-		}
+		return Route{}, internalError{stErr}
 	}
 
 	for _, r := range routes {
@@ -68,7 +61,7 @@ func (rsl routeStoreLocal) GetByCurrDest(curr Id, dest Id) (Route, RouterError) 
 		}
 	}
 
-	route, rtErr := rsl.router.Route(curr, dest)
+	route, rtErr := rsl.MapRoute(curr, dest)
 
 	if rtErr != nil {
 		return Route{}, rtErr
@@ -77,20 +70,42 @@ func (rsl routeStoreLocal) GetByCurrDest(curr Id, dest Id) (Route, RouterError) 
 	return route, nil
 }
 
-func (rsl routeStoreLocal) All() (map[Id]Route, StoreError) {
-	return rsl.routes, nil
-}
-func (rsl routeStoreLocal) GetById(id Id) (Route, StoreError) {
+func (rsl routeStoreLocal) All() (map[Id]Route, error) { return rsl.routes, nil }
+
+func (rsl routeStoreLocal) GetById(id Id) (Route, error) {
 	route, found := rsl.routes[id]
 
 	if !found {
-		return Route{}, IdDoesntExist{}
+		return Route{}, idDoesntExist(id)
 	}
 
 	return route, nil
 }
 
-func (rsl routeStoreLocal) Delete(id Id) StoreError {
+func (rsl routeStoreLocal) WriteRoute(r Route) error {
+
+	_, found := rsl.routes[r.Id]
+	if found {
+		return idAlreadyExists(r.Id)
+	}
+
+	rsl.routes[r.Id] = r
+
+	return nil
+}
+
+func (rsl routeStoreLocal) WriteBatch(r []Route) error {
+	ids := slices.Collect(maps.Keys(rsl.routes))
+	for _, v := range r {
+		if slices.Contains(ids, v.Id) {
+			return idAlreadyExists(v.Id)
+		}
+		rsl.routes[v.Id] = v
+	}
+	return nil
+}
+
+func (rsl routeStoreLocal) Delete(id Id) error {
 	_, err := rsl.GetById(id)
 	if err != nil {
 		return err
@@ -100,4 +115,12 @@ func (rsl routeStoreLocal) Delete(id Id) StoreError {
 
 	return nil
 
+}
+func (rsl routeStoreLocal) DeleteBatch(ids []Id) error {
+	// TODO: Delete all routes
+	return nil
+}
+
+func (e idDoesntExist) Id() Id {
+	return Id(e)
 }

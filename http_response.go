@@ -53,7 +53,7 @@ type (
 )
 
 func (s statusOK) HttpCode() int { return http.StatusOK }
-func (s statusOK) Body() any     { return nil }
+func (s statusOK) Body() any     { return s.body }
 
 func (s statusCreated) HttpCode() int { return http.StatusCreated }
 func (s statusCreated) Body() any     { return s.body }

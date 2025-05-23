@@ -6,6 +6,12 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	OnTime    TripStatus = 0
+	Delayed   TripStatus = 1
+	Cancelled TripStatus = 2
+)
+
 type (
 	TripStatus int
 	Trip       struct {
@@ -21,15 +27,9 @@ type (
 		trips    tripStoreLocal
 		trains   StoreReader[Train]
 		stations StoreReader[Station]
-		router   Router
+		router   RouteStore
 	}
 	tripStoreLocal map[Id]Trip
-)
-
-const (
-	OnTime    TripStatus = 0
-	Delayed              = 1
-	Cancelled            = 2
 )
 
 func (ts TripStatus) String() string {
@@ -64,15 +64,15 @@ func NewTripCoordinatorLocal(trains StoreReader[Train], stations StoreReader[Sta
 	}
 }
 
-func (tcl tripStoreLocal) All() (map[Id]Trip, StoreError) {
+func (tcl tripStoreLocal) All() (map[Id]Trip, error) {
 	return tcl, nil
 }
 
-func (tsl tripStoreLocal) GetById(id Id) (Trip, StoreError) {
+func (tsl tripStoreLocal) GetById(id Id) (Trip, error) {
 	t, found := tsl[id]
 
 	if !found {
-		return Trip{}, IdDoesntExist(id)
+		return Trip{}, idDoesntExist(id)
 	}
 
 	return t, nil

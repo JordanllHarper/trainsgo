@@ -10,10 +10,12 @@ func serveJson(
 	w http.ResponseWriter,
 	method string,
 	response HttpResponse,
-	err HttpError,
+	err error,
 ) {
 	if err != nil {
-		http.Error(w, err.Error(), err.HttpCode())
+		httpErr := mapToHttpErr(err)
+		log.Printf("Received error %s request: %v\n", method, err)
+		http.Error(w, httpErr.Error(), httpErr.HttpCode())
 		return
 	}
 

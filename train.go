@@ -32,16 +32,16 @@ func NewTrain(
 	}
 }
 
-func (tsl trainStoreLocal) All() (map[Id]Train, StoreError) {
+func (tsl trainStoreLocal) All() (map[Id]Train, error) {
 	return maps.Clone(tsl), nil
 
 }
 
-func (tsl trainStoreLocal) GetById(id Id) (Train, StoreError) {
+func (tsl trainStoreLocal) GetById(id Id) (Train, error) {
 	t, found := tsl[id]
 	if !found {
 		return Train{},
-			IdDoesntExist(id)
+			idDoesntExist(id)
 	}
 
 	return t, nil
@@ -56,30 +56,11 @@ func (t Train) String() string {
 	)
 }
 
-type RegisterTrainErrorCode int
-
-const (
-	RegisterTrainErrIdAlreadyExist RegisterTrainErrorCode = 0
-)
-
-type RegisterTrainError interface {
-	error
-	RegisterCode() RegisterTrainErrorCode
-}
-
-func (e IdDoesntExist) Id() Id {
-	return Id(e)
-}
-
-func (e IdDoesntExist) RegisterCode() RegisterTrainErrorCode {
-	return RegisterTrainErrIdAlreadyExist
-}
-
-func (tsl trainStoreLocal) register(t Train) RegisterTrainError {
+func (tsl trainStoreLocal) register(t Train) error {
 	_, found := tsl[t.E.Id]
 
 	if found {
-		return IdDoesntExist(t.E.Id)
+		return idDoesntExist(t.E.Id)
 	}
 
 	tsl[t.E.Id] = t
@@ -87,7 +68,11 @@ func (tsl trainStoreLocal) register(t Train) RegisterTrainError {
 	return nil
 }
 
-func (tsl trainStoreLocal) Delete(id Id) StoreError {
+func (tsl trainStoreLocal) Delete(id Id) error {
+	// TODO: Finish this trains schedule and then remove
+	return nil
+}
+func (tsl trainStoreLocal) DeleteBatch(ids []Id) error {
 	// TODO: Finish this trains schedule and then remove
 	return nil
 }
@@ -97,7 +82,7 @@ type trainHandlerLocal struct {
 	stations StoreReader[Station]
 }
 
-func (h trainHandlerLocal) handlePost(req *http.Request) (HttpResponse, HttpError) {
+func (h trainHandlerLocal) handlePost(req *http.Request) (HttpResponse, error) {
 	body := req.Body
 	defer body.Close()
 
@@ -116,13 +101,9 @@ func (h trainHandlerLocal) handlePost(req *http.Request) (HttpResponse, HttpErro
 
 	t := NewTrain(v.Name, station)
 
-	trErr := h.trains.register(t)
-	if trErr != nil {
-		switch trErr.RegisterCode() {
-		case RegisterTrainErrIdAlreadyExist:
-			return nil, idAlreadyExists(t.E.Id)
-		}
-		return nil, internalServerError{trErr}
+	err = h.trains.register(t)
+	if err != nil {
+		return nil, err
 	}
 
 	return statusCreated{t}, nil

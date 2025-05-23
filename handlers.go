@@ -7,11 +7,11 @@ import (
 	"github.com/google/uuid"
 )
 
-func (s stationStoreLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (s *stationStoreLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	method := req.Method
 
 	var response HttpResponse
-	var err HttpError
+	var err error
 	switch method {
 	case "GET":
 		response, err = handleGet(req, s)
@@ -32,7 +32,7 @@ func (h trainHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	method := req.Method
 
 	var code HttpResponse
-	var body HttpError
+	var body error
 	switch method {
 	case "GET":
 		code, body = handleGet(req, h.trains)
@@ -53,7 +53,7 @@ func (h lineHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	method := req.Method
 
 	var code HttpResponse
-	var body HttpError
+	var body error
 	switch method {
 	case "GET":
 		code, body = handleGet(req, h.lines)
@@ -74,7 +74,7 @@ func (h tripHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	method := req.Method
 
 	var code HttpResponse
-	var body HttpError
+	var body error
 	switch method {
 	case "GET":
 		code, body = handleGet(req, h.trips)
@@ -110,7 +110,7 @@ func (h trainHandlerLocal) handlePut(req *http.Request) (HttpResponse, HttpError
 	return statusOK{body: train}, nil
 }
 
-func (h lineHandlerLocal) handlePost(req *http.Request) (HttpResponse, HttpError) {
+func (h lineHandlerLocal) handlePost(req *http.Request) (HttpResponse, error) {
 
 	var t linePostBody
 
@@ -160,7 +160,7 @@ func (h lineHandlerLocal) handlePut(req *http.Request) (HttpResponse, HttpError)
 	return statusOK{line}, nil
 }
 
-func (s stationStoreLocal) handlePost(req *http.Request) (HttpResponse, HttpError) {
+func (s stationStoreLocal) handlePost(req *http.Request) (HttpResponse, error) {
 	var v stationPostBody
 
 	err := json.NewDecoder(req.Body).Decode(&v)
@@ -178,10 +178,10 @@ func (s stationStoreLocal) handlePost(req *http.Request) (HttpResponse, HttpErro
 			v.Platforms,
 		)
 
-	stErr := s.register(st)
+	err = s.register(st)
 
-	if stErr != nil {
-		return nil, stErr
+	if err != nil {
+		return nil, err
 
 	}
 	return statusCreated{st}, nil
@@ -208,8 +208,7 @@ func (s stationStoreLocal) handlePut(req *http.Request) (HttpResponse, HttpError
 	return statusOK{}, nil
 }
 
-func (h tripHandlerLocal) handlePost(req *http.Request) (HttpResponse, HttpError) {
-
+func (h tripHandlerLocal) handlePost(req *http.Request) (HttpResponse, error) {
 	var t tripPostBody
 
 	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
@@ -235,16 +234,14 @@ func (h tripHandlerLocal) handlePost(req *http.Request) (HttpResponse, HttpError
 
 	h.trips[trip.Id] = trip
 
-	_, rtErr := h.router.Route(fromStation.E.Id, toStation.E.Id)
-
-	if rtErr != nil {
-		return nil, rtErr
+	if _, err := h.router.MapRoute(fromStation.E.Id, toStation.E.Id); err != nil {
+		return nil, err
 	}
 	// We've added trip to the store, now we need to plot a route from the starting station to the ending station
 	return statusCreated{trip}, nil
 }
 
-func (h tripHandlerLocal) handlePut(req *http.Request) (HttpResponse, HttpError) {
+func (h tripHandlerLocal) handlePut(req *http.Request) (HttpResponse, error) {
 	var t tripPutBody
 
 	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {

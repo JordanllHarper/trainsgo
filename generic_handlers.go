@@ -12,37 +12,37 @@ import (
 func handleGet[V any](
 	req *http.Request,
 	store StoreReader[V],
-) (HttpResponse, HttpError) {
+) (HttpResponse, error) {
 	query := req.URL.Query()
-	hasId := query.Has("id")
 
-	if hasId {
-		parsedId, err := uuid.Parse(query.Get("id"))
+	if query.Has("id") {
+		id := query.Get("id")
+		parsedId, err := uuid.Parse(id)
 		if err != nil {
-			return nil, badId(parsedId.String())
+			return nil, badId(id)
 		}
-		value, storeErr := store.GetById(parsedId)
 
-		if storeErr != nil {
-			return nil, storeErr
+		value, err := store.GetById(parsedId)
+		if err != nil {
+			return nil, err
 		}
 		return statusOK{value}, nil
-	} else {
-		all, storeErr := store.All()
-		if storeErr != nil {
-			return nil, internalServerError{storeErr}
-		}
-
-		storeValues := maps.Values(all)
-		arr := slices.Collect(storeValues)
-
-		response := struct {
-			Values []V `json:"values"`
-		}{
-			Values: arr,
-		}
-		return statusOK{response}, nil
 	}
+
+	all, err := store.All()
+	if err != nil {
+		return nil, internalError{err}
+	}
+
+	storeValues := maps.Values(all)
+	arr := slices.Collect(storeValues)
+
+	response := struct {
+		Values []V `json:"values"`
+	}{
+		Values: arr,
+	}
+	return statusOK{response}, nil
 }
 
 func handleDelete(req *http.Request, store StoreDeleter) (HttpResponse, HttpError) {
@@ -58,7 +58,7 @@ func handleDelete(req *http.Request, store StoreDeleter) (HttpResponse, HttpErro
 	}
 
 	if delErr := store.Delete(id); delErr != nil {
-		return nil, internalServerError{delErr}
+		return nil, internalError{delErr}
 	}
 
 	return statusOK{nil}, nil

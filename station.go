@@ -14,11 +14,6 @@ type (
 		SurroundingLines []Line `json:"surroundingLines"`
 	}
 
-	errStationAlreadyAtPosition struct {
-		Id
-		Position
-	}
-
 	stationStoreLocal struct {
 		stations map[Id]Station
 	}
@@ -45,21 +40,21 @@ func (s Station) String() string {
 	)
 }
 
-func (ssl stationStoreLocal) GetById(id Id) (Station, StoreError) {
+func (ssl stationStoreLocal) GetById(id Id) (Station, error) {
 	item, found := ssl.stations[id]
 	if !found {
-		return Station{}, IdDoesntExist(id)
+		return Station{}, idDoesntExist(id)
 
 	}
 
 	return item, nil
 }
 
-func (ssl stationStoreLocal) All() (map[Id]Station, StoreError) {
-	return maps.Clone(ssl.stations), nil
+func (ssl stationStoreLocal) All() (map[Id]Station, error) {
+	return ssl.stations, nil
 }
 
-func (ssl *stationStoreLocal) getByName(name string) ([]Station, StoreError) {
+func (ssl *stationStoreLocal) getByName(name string) ([]Station, error) {
 	stations := []Station{}
 	for v := range maps.Values(ssl.stations) {
 		if v.Name == name {
@@ -70,38 +65,16 @@ func (ssl *stationStoreLocal) getByName(name string) ([]Station, StoreError) {
 	return stations, nil
 }
 
-func (err errStationAlreadyAtPosition) Error() string {
-	return fmt.Sprintf(
-		"There is already Station %v at position %s",
-		err.Id,
-		err.Position,
-	)
-}
-
 type (
-	registerStationErrorCode int
-
 	stationPositionTaken Id
 )
 
-const (
-	registerStationErrIdExists      registerStationErrorCode = 0
-	registerStationErrPositionTaken registerStationErrorCode = 1
-)
-
-func (e idAlreadyExists) RegisterCode() registerStationErrorCode { return registerStationErrIdExists }
-
 func (e stationPositionTaken) HttpCode() int { return http.StatusBadRequest }
-
-func (e stationPositionTaken) RegisterCode() registerStationErrorCode {
-	return registerStationErrPositionTaken
-}
-
 func (e stationPositionTaken) Error() string {
 	return fmt.Sprintf("Station Position already taken by %s", Id(e))
 }
 
-func (ssl *stationStoreLocal) register(s Station) HttpError {
+func (ssl stationStoreLocal) register(s Station) HttpError {
 	_, found := ssl.stations[s.E.Id]
 
 	if found {
@@ -119,19 +92,24 @@ func (ssl *stationStoreLocal) register(s Station) HttpError {
 	return nil
 }
 
-func (ssl stationStoreLocal) Delete(id Id) StoreError {
-	// TODO: Cancel all schedules going to this station
-	return nil
-}
-
-func (ssl *stationStoreLocal) changeName(id Id, newName string) StoreError {
+func (ssl stationStoreLocal) changeName(id Id, newName string) error {
 	station, found := ssl.stations[id]
 	if !found {
-		return IdDoesntExist(id)
+		return idDoesntExist(id)
 	}
 
 	station.Name = newName
 	ssl.stations[id] = station
 
+	return nil
+}
+
+func (ssl stationStoreLocal) Delete(id Id) error {
+	// TODO: Cancel all schedules going to this station
+	return nil
+}
+
+func (ssl stationStoreLocal) DeleteBatch(ids []Id) error {
+	// TODO: Cancel all schedules going to stations
 	return nil
 }

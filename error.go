@@ -1,7 +1,17 @@
 package main
 
 import (
+	"errors"
 	"net/http"
+)
+
+type (
+	badId string
+
+	idDoesntExist   Id
+	idAlreadyExists Id
+
+	internalError struct{ error }
 )
 
 type (
@@ -10,22 +20,18 @@ type (
 		error
 	}
 
-	genericError struct {
-		error
-		code int
-	}
-
-	badRequest struct{ error }
-
-	methodNotAllowed    string
-	malformedBody       struct{}
-	internalServerError struct{ error }
-
-	badId string
-
-	idDoesntExist   Id
-	idAlreadyExists Id
+	badRequest       struct{ error }
+	methodNotAllowed string
+	malformedBody    struct{}
 )
+
+func mapToHttpErr(err error) HttpError {
+	var rec HttpError
+	if errors.As(err, &rec) {
+		return rec
+	}
+	return internalError{err}
+}
 
 func (e malformedBody) Error() string { return msgMalformedBody() }
 func (e malformedBody) HttpCode() int { return http.StatusBadRequest }
@@ -42,10 +48,8 @@ func (e idAlreadyExists) HttpCode() int { return http.StatusBadRequest }
 func (e methodNotAllowed) Error() string { return msgMethodNotAllowed(string(e)) }
 func (e methodNotAllowed) HttpCode() int { return http.StatusMethodNotAllowed }
 
-func (e internalServerError) Error() string { return e.error.Error() }
-func (e internalServerError) HttpCode() int { return http.StatusInternalServerError }
+func (e internalError) Error() string { return e.error.Error() }
+func (e internalError) HttpCode() int { return http.StatusInternalServerError }
 
 func (e badRequest) Error() string { return e.error.Error() }
 func (e badRequest) HttpCode() int { return http.StatusBadRequest }
-
-func (e genericError) HttpCode() int { return e.code }

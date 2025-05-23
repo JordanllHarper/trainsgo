@@ -26,8 +26,9 @@ type lineHandlerLocal struct {
 func newLine(one, two Station, name string) Line {
 	return Line{
 		Id:         uuid.New(),
-		StationOne: one.E.Id, StationTwo: two.E.Id,
-		Name: name,
+		StationOne: one.E.Id,
+		StationTwo: two.E.Id,
+		Name:       name,
 	}
 }
 
@@ -35,19 +36,19 @@ func NewLineStoreLocal() lineStoreLocal {
 	return map[Id]Line{}
 }
 
-func (lsl lineStoreLocal) All() (map[Id]Line, StoreError) {
+func (lsl lineStoreLocal) All() (map[Id]Line, error) {
 	return maps.Clone(lsl), nil
 }
 
-func (lsl lineStoreLocal) GetById(id Id) (Line, StoreError) {
+func (lsl lineStoreLocal) GetById(id Id) (Line, error) {
 	value, found := lsl[id]
 	if !found {
-		return Line{}, IdDoesntExist(id)
+		return Line{}, idDoesntExist(id)
 	}
 	return value, nil
 }
 
-func (lsl lineStoreLocal) getByName(name string) ([]Line, StoreError) {
+func (lsl lineStoreLocal) getByName(name string) ([]Line, error) {
 	lines := []Line{}
 	for v := range maps.Values(lsl) {
 		if v.Name == name {
@@ -58,38 +59,32 @@ func (lsl lineStoreLocal) getByName(name string) ([]Line, StoreError) {
 	return lines, nil
 }
 
-func (lsl lineStoreLocal) changeName(id Id, newName string) StoreError {
+func (lsl lineStoreLocal) changeName(id Id, newName string) error {
 	line, found := lsl[id]
 	if !found {
-		return IdDoesntExist(id)
+		return idDoesntExist(id)
 	}
 	line.Name = newName
 	lsl[id] = line
 	return nil
 }
 
-type registerLineErrorCode int
-
-const (
-	registerLineErrIdExists registerLineErrorCode = iota
-)
-
-type registerLineError struct {
-	id   Id
-	code registerLineErrorCode
-}
-
-func (lsl lineStoreLocal) register(l Line) *registerLineError {
+func (lsl lineStoreLocal) register(l Line) error {
 	_, found := lsl[l.Id]
 	if found {
-		return &registerLineError{l.Id, registerLineErrIdExists}
+		return idAlreadyExists(l.Id)
 	}
 
 	lsl[l.Id] = l
 	return nil
 }
 
-func (lsl lineStoreLocal) Delete(id Id) StoreError {
+func (lsl lineStoreLocal) Delete(id Id) error {
 	// TODO: Wait for trains to finish using this line, then decommission
+	return nil
+}
+
+func (lsl lineStoreLocal) DeleteBatch(ids []Id) error {
+	// TODO: Wait for trains to finish using these lines, then decommission
 	return nil
 }
