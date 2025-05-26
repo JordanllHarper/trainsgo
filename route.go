@@ -199,25 +199,26 @@ func (ri routeStoreLocal) MapRoute(currentStationId, destStationId Id) ([]Line, 
 	searcherCh := make(chan searcher)
 	rmvCh := make(chan Id)
 
-	bfs(
+	go bfs(
 		ri.stations,
 		currentStationId,
 		destStationId,
 		[]Line{},
-		routeCh,
-		visitCh,
-		searcherCh,
-		rmvCh,
+		chans{
+			routeCh,
+			visitCh,
+			searcherCh,
+			rmvCh,
+		},
 	)
 loop:
 	for {
 		select {
+		case r := <-routeCh:
+			routes = append(routes, r)
 		case s := <-searcherCh:
 			fmt.Println("New Searcher", s.id)
 			searchers[s.id] = s.updCh
-
-		case r := <-routeCh:
-			routes = append(routes, r)
 		case id := <-rmvCh:
 			fmt.Println("Removing Searcher", id)
 			delete(searchers, id)
@@ -233,20 +234,23 @@ loop:
 	return smallestRoute, nil
 }
 
+type chans struct {
+	endCh    chan<- []Line
+	visitCh  chan<- Id
+	searchCh chan<- searcher
+	rmvCh    chan<- Id
+}
+
 func bfs(
 	stations IDable[Station],
 	currentStationId, destStationId Id,
 	currentRoute []Line,
-	endCh chan<- []Line,
-	visitCh chan<- Id,
-	searchCh chan<- searcher,
-	rmvCh chan<- Id,
+	chs chans,
 ) {
-	{
-		if currentStationId == destStationId {
-			endCh <- currentRoute
-			return
-		}
+	// We're done if the curr matches dst
+	if currentStationId == destStationId {
+		chs.endCh <- currentRoute
+		return
 	}
 	// Check if this is a valid station
 	curr, err := stations.GetById(currentStationId)
@@ -279,15 +283,15 @@ func bfs(
 
 	// Register a new searcher
 	searcherId := uuid.New()
-	searchCh <- searcher{
+	chs.searchCh <- searcher{
 		searcherId,
 		updateRecCh,
 	}
 	// we will remove it as soon as we've spun up all the other routines
-	defer func() { rmvCh <- searcherId }()
+	defer func() { chs.rmvCh <- searcherId }()
 
 	// Update all goroutines with this station id
-	visitCh <- currentStationId
+	chs.visitCh <- currentStationId
 
 	for _, line := range curr.SurroundingLines {
 		if visited[line.Id] {
@@ -305,10 +309,7 @@ func bfs(
 			nextStId,
 			destStationId,
 			append(currentRoute, line),
-			endCh,
-			visitCh,
-			searchCh,
-			rmvCh,
+			chs,
 		)
 	}
 }
