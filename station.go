@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"strings"
 )
 
 type (
@@ -43,7 +44,10 @@ func (s Station) String() string {
 func (ssl stationStoreLocal) GetById(id Id) (Station, error) {
 	item, found := ssl.stations[id]
 	if !found {
-		return Station{}, idDoesntExist(id)
+		return Station{}, fmt.Errorf(
+			"Get station by ID: %w",
+			idDoesntExist(id),
+		)
 
 	}
 
@@ -54,10 +58,10 @@ func (ssl stationStoreLocal) All() (map[Id]Station, error) {
 	return ssl.stations, nil
 }
 
-func (ssl *stationStoreLocal) getByName(name string) ([]Station, error) {
+func (ssl *stationStoreLocal) GetByName(name string) ([]Station, error) {
 	stations := []Station{}
 	for v := range maps.Values(ssl.stations) {
-		if v.Name == name {
+		if strings.Contains(v.Name, name) {
 			stations = append(stations, v)
 		}
 	}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -14,7 +13,7 @@ func (s *stationStoreLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) 
 	var err error
 	switch method {
 	case "GET":
-		response, err = handleGet(req, s)
+		response, err = handleGetNameIdAll(req.URL.Query(), s)
 	case "DELETE":
 		response, err = handleDelete(req, s)
 	case "PUT":
@@ -35,7 +34,7 @@ func (h trainHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var body error
 	switch method {
 	case "GET":
-		code, body = handleGet(req, h.trains)
+		code, body = handleGetNameIdAll(req.URL.Query(), h.trains)
 	case "DELETE":
 		code, body = handleDelete(req, h.trains)
 	case "PUT":
@@ -56,7 +55,7 @@ func (h lineHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var body error
 	switch method {
 	case "GET":
-		code, body = handleGet(req, h.lines)
+		code, body = handleGetNameIdAll(req.URL.Query(), h.lines)
 	case "DELETE":
 		code, body = handleDelete(req, h.lines)
 	case "PUT":
@@ -77,7 +76,7 @@ func (h tripHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var body error
 	switch method {
 	case "GET":
-		code, body = handleGet(req, h.trips)
+		code, body = handleGetIdAll(req.URL.Query(), h.trips)
 	case "POST":
 		code, body = h.handlePost(req)
 	case "PUT":
@@ -90,7 +89,7 @@ func (h tripHandlerLocal) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (h trainHandlerLocal) handlePut(req *http.Request) (HttpResponse, HttpError) {
 	var t renameBody
 
-	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
+	if err := jsonDecode(req, &t); err != nil {
 		return nil, malformedBody{}
 	}
 
@@ -114,7 +113,7 @@ func (h lineHandlerLocal) handlePost(req *http.Request) (HttpResponse, error) {
 
 	var t linePostBody
 
-	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
+	if err := jsonDecode(req, &t); err != nil {
 		return nil, malformedBody{}
 	}
 
@@ -138,7 +137,7 @@ func (h lineHandlerLocal) handlePost(req *http.Request) (HttpResponse, error) {
 func (h lineHandlerLocal) handlePut(req *http.Request) (HttpResponse, HttpError) {
 	var t renameBody
 
-	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
+	if err := jsonDecode(req, &t); err != nil {
 		return nil, malformedBody{}
 	}
 
@@ -163,8 +162,7 @@ func (h lineHandlerLocal) handlePut(req *http.Request) (HttpResponse, HttpError)
 func (s stationStoreLocal) handlePost(req *http.Request) (HttpResponse, error) {
 	var v stationPostBody
 
-	err := json.NewDecoder(req.Body).Decode(&v)
-	if err != nil {
+	if err := jsonDecode(req, &v); err != nil {
 		return nil, malformedBody{}
 	}
 
@@ -178,7 +176,7 @@ func (s stationStoreLocal) handlePost(req *http.Request) (HttpResponse, error) {
 			v.Platforms,
 		)
 
-	err = s.register(st)
+	err := s.register(st)
 
 	if err != nil {
 		return nil, err
@@ -190,7 +188,7 @@ func (s stationStoreLocal) handlePost(req *http.Request) (HttpResponse, error) {
 func (s stationStoreLocal) handlePut(req *http.Request) (HttpResponse, HttpError) {
 	var t renameBody
 
-	err := json.NewDecoder(req.Body).Decode(&t)
+	err := jsonDecode(req, t)
 	if err != nil {
 		return nil, malformedBody{}
 	}
@@ -211,7 +209,7 @@ func (s stationStoreLocal) handlePut(req *http.Request) (HttpResponse, HttpError
 func (h tripHandlerLocal) handlePost(req *http.Request) (HttpResponse, error) {
 	var t tripPostBody
 
-	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
+	if err := jsonDecode(req, t); err != nil {
 		return nil, malformedBody{}
 	}
 
@@ -244,7 +242,7 @@ func (h tripHandlerLocal) handlePost(req *http.Request) (HttpResponse, error) {
 func (h tripHandlerLocal) handlePut(req *http.Request) (HttpResponse, error) {
 	var t tripPutBody
 
-	if err := json.NewDecoder(req.Body).Decode(&t); err != nil {
+	if err := jsonDecode(req, &t); err != nil {
 		return nil, malformedBody{}
 	}
 

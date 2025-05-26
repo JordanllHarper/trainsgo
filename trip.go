@@ -25,8 +25,8 @@ type (
 
 	tripHandlerLocal struct {
 		trips    tripStoreLocal
-		trains   StoreReader[Train]
-		stations StoreReader[Station]
+		trains   StoreIDable[Train]
+		stations StoreIDable[Station]
 		router   RouteStore
 	}
 	tripStoreLocal map[Id]Trip
@@ -53,14 +53,6 @@ func NewTrip(from, to Station, train Train, expTimes ExpectedTimes, status TripS
 		train.E.Id,
 		expTimes,
 		status,
-	}
-}
-
-func NewTripCoordinatorLocal(trains StoreReader[Train], stations StoreReader[Station]) *tripHandlerLocal {
-	return &tripHandlerLocal{
-		trips:    map[Id]Trip{},
-		trains:   trains,
-		stations: stations,
 	}
 }
 

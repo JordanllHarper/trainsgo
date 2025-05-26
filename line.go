@@ -2,6 +2,7 @@ package main
 
 import (
 	"maps"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -20,7 +21,7 @@ type (
 
 type lineHandlerLocal struct {
 	lines    lineStoreLocal
-	stations StoreReader[Station]
+	stations StoreIDable[Station]
 }
 
 func newLine(one, two Station, name string) Line {
@@ -48,10 +49,10 @@ func (lsl lineStoreLocal) GetById(id Id) (Line, error) {
 	return value, nil
 }
 
-func (lsl lineStoreLocal) getByName(name string) ([]Line, error) {
+func (lsl lineStoreLocal) GetByName(name string) ([]Line, error) {
 	lines := []Line{}
 	for v := range maps.Values(lsl) {
-		if v.Name == name {
+		if strings.Contains(v.Name, name) {
 			lines = append(lines, v)
 		}
 	}

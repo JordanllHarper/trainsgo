@@ -4,7 +4,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func getByStringId[V any](values StoreReader[V], id string) (V, error) {
+func getByStringId[V any](values StoreIDable[V], id string) (V, error) {
 	var v V
 	stId, err := uuid.Parse(id)
 	if err != nil {

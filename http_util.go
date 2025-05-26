@@ -30,3 +30,7 @@ func serveJson(
 		}
 	}
 }
+
+func jsonDecode(r *http.Request, v any) error {
+	return json.NewDecoder(r.Body).Decode(&v)
+}

@@ -1,20 +1,39 @@
 package main
 
+// Atomic interfaces
 type (
-	StoreReader[T any] interface {
+	Store[T any] interface {
 		All() (map[Id]T, error)
+	}
+
+	IDable[T any] interface {
 		GetById(id Id) (T, error)
 	}
 
-	StoreDeleter interface {
+	Nameable[T any] interface {
+		GetByName(name string) ([]T, error)
+	}
+
+	Deleter interface {
 		Delete(id Id) error
 		DeleteBatch(id []Id) error
 	}
+)
 
-	StoreReaderDeleter[T any] interface {
-		StoreReader[T]
-		StoreDeleter
+// Composed interfaces
+type (
+	StoreIDable[T any] interface {
+		Store[T]
+		IDable[T]
 	}
 
-	InternalStoreError struct{ error }
+	StoreIdNameable[T any] interface {
+		StoreIDable[T]
+		Nameable[T]
+	}
+
+	StoreDeleter[T any] interface {
+		Store[T]
+		Deleter
+	}
 )

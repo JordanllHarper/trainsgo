@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -47,6 +48,17 @@ func (tsl trainStoreLocal) GetById(id Id) (Train, error) {
 	return t, nil
 }
 
+func (tsl trainStoreLocal) GetByName(name string) ([]Train, error) {
+	trains := []Train{}
+	for v := range maps.Values(tsl) {
+		if strings.Contains(v.Name, name) {
+			trains = append(trains, v)
+		}
+	}
+
+	return trains, nil
+}
+
 func (t Train) String() string {
 	return fmt.Sprintf(
 		"%v: %v, %v",
@@ -79,7 +91,7 @@ func (tsl trainStoreLocal) DeleteBatch(ids []Id) error {
 
 type trainHandlerLocal struct {
 	trains   trainStoreLocal
-	stations StoreReader[Station]
+	stations StoreIDable[Station]
 }
 
 func (h trainHandlerLocal) handlePost(req *http.Request) (HttpResponse, error) {
